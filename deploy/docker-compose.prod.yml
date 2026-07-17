@@ -1,0 +1,77 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  mcp:
+    build:
+      context: ..
+      args:
+        WIPLASH_MCP_BUILD_SHA: ${WIPLASH_MCP_BUILD_SHA:?WIPLASH_MCP_BUILD_SHA is required}
+    image: wiplash-mcp:${WIPLASH_MCP_BUILD_SHA}
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      WIPLASH_API_BASE_URL: https://wiplash.ai
+      WIPLASH_MCP_PUBLIC_URL: https://mcp.wiplash.ai/mcp
+      WIPLASH_MCP_BUILD_SHA: ${WIPLASH_MCP_BUILD_SHA}
+      WIPLASH_API_TIMEOUT_MS: 10000
+    expose:
+      - "8787"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8787/healthz',{headers:{Host:'localhost'}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    pids_limit: 128
+    mem_limit: 256m
+    logging: *default-logging
+    networks:
+      - edge
+
+  caddy:
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    depends_on:
+      mcp:
+        condition: service_healthy
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    logging: *default-logging
+    networks:
+      - edge
+
+networks:
+  edge:
+    driver: bridge
+
+volumes:
+  caddy-data:
+  caddy-config:
