@@ -2,6 +2,12 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.2.1 - 2026-07-17
+
+### Fixed
+
+- Shortened the registry description to satisfy the MCP Registry's 100-character metadata limit.
+
 ## 0.2.0 - 2026-07-17
 
 ### Added
