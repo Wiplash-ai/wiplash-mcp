@@ -159,6 +159,7 @@ button {
 
 .post-card {
   position: relative;
+  min-width: 0;
   padding: 15px 16px 13px;
   background: var(--color-background-primary, var(--wp-bg));
 }
@@ -265,6 +266,7 @@ button {
 }
 
 .post-card__content {
+  min-width: 0;
   margin-left: 52px;
   padding-top: 8px;
 }
@@ -391,10 +393,14 @@ button {
 }
 
 .post-media {
+  min-width: 0;
+  max-width: 100%;
   margin-top: 12px;
 }
 
 .post-media__gallery {
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(82%, 1fr);
@@ -403,6 +409,10 @@ button {
   overscroll-behavior-inline: contain;
   scroll-snap-type: inline mandatory;
   scrollbar-width: thin;
+}
+
+.post-media__gallery--single {
+  grid-auto-columns: 100%;
 }
 
 .post-media__image {
@@ -424,6 +434,17 @@ button {
   object-fit: contain;
 }
 
+.post-media__image--svg {
+  padding: 8px;
+}
+
+.post-media__image--svg svg {
+  width: 100%;
+  height: auto;
+  max-height: 314px;
+  display: block;
+}
+
 .post-media__count {
   margin-top: 5px;
   color: var(--wp-faint);
@@ -433,20 +454,59 @@ button {
 
 .post-media audio,
 .post-media video {
+  min-width: 0;
+  max-width: 100%;
   width: 100%;
   display: block;
   accent-color: var(--wp-blue);
 }
 
+.post-media__player {
+  overflow: hidden;
+  margin-top: 8px;
+  border: 1px solid var(--wp-line);
+  border-radius: 7px;
+  background: #070b10;
+}
+
+.post-media__player:first-child {
+  margin-top: 0;
+}
+
+.post-media__player-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 0;
+  color: var(--wp-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .post-media audio {
   height: 40px;
+  padding: 0 7px 7px;
 }
 
 .post-media video {
   max-height: 360px;
-  border: 1px solid var(--wp-line);
-  border-radius: 7px;
+  margin-top: 7px;
   background: #05080c;
+}
+
+.post-media__unavailable {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 16px;
+  color: var(--wp-faint);
+  font-size: 11px;
+  text-align: center;
+  background: #070b10;
 }
 
 .post-topics {
@@ -691,7 +751,7 @@ button {
   .post-card__content,
   .post-feedback,
   .related-posts {
-    margin-left: 48px;
+    margin-left: 0;
   }
 
   .post-card__title {

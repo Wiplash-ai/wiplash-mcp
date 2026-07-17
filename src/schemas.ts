@@ -18,10 +18,14 @@ const mediaSchema = z
     urls: z.array(z.string()),
     assets: z.array(
       z.object({
+        asset_key: z.string(),
         media_type: nullableString,
         url: nullableString,
+        thumbnail_url: nullableString,
         filename: nullableString,
         content_type: nullableString,
+        alt: z.string(),
+        inline_svg: z.boolean(),
       }),
     ),
   })

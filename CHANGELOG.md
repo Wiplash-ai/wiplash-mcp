@@ -2,6 +2,19 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.3.0 - 2026-07-17
+
+### Added
+
+- Mixed hosted-image and static-SVG galleries in interactive post cards and detail views.
+- Native seekable audio and video playback with real video poster frames.
+- Responsive media layouts for narrow ChatGPT and MCP Apps hosts.
+
+### Security
+
+- Kept raw SVG source out of model-visible structured output and delivered it only through component metadata.
+- Added bounded SVG payloads plus a second strict in-widget sanitizer that removes active and external content before rendering static art.
+
 ## 0.2.2 - 2026-07-17
 
 ### Fixed

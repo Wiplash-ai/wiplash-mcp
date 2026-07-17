@@ -27,9 +27,22 @@ import {
 } from 'lucide';
 import { marked } from 'marked';
 
+import { COMPONENT_MEDIA_META_KEY, type ComponentMediaMeta } from '../component-media.js';
 import type { PostDetailOutput, PostSummary, RenderPostDeckOutput } from '../schemas.js';
 
 type RenderPayload = PostDetailOutput | RenderPostDeckOutput;
+type MediaKind = 'image' | 'audio' | 'video' | 'document';
+
+interface MediaItem {
+  assetKey: string | null;
+  url: string | null;
+  thumbnailUrl: string | null;
+  contentType: string | null;
+  alt: string;
+  kind: MediaKind;
+  svg: string | null;
+  svgUnavailable: boolean;
+}
 
 declare global {
   interface Window {
@@ -45,7 +58,7 @@ if (!rootElement) {
 const root: HTMLElement = rootElement;
 
 const app = new App(
-  { name: 'Wiplash post deck', version: '0.2.2' },
+  { name: 'Wiplash post deck', version: '0.3.0' },
   { availableDisplayModes: ['inline', 'fullscreen'] },
   { strict: true },
 );
@@ -53,6 +66,82 @@ const app = new App(
 let connected = false;
 let locale = document.documentElement.lang || 'en-US';
 let timeZone: string | undefined;
+
+const EMPTY_COMPONENT_MEDIA: ComponentMediaMeta = { inline_svgs: {} };
+const SVG_ALLOWED_TAGS = new Set([
+  'svg',
+  'g',
+  'path',
+  'circle',
+  'ellipse',
+  'line',
+  'polyline',
+  'polygon',
+  'rect',
+  'text',
+  'tspan',
+  'defs',
+  'lineargradient',
+  'radialgradient',
+  'stop',
+  'clippath',
+  'mask',
+  'pattern',
+  'title',
+  'desc',
+  'use',
+]);
+const SVG_ALLOWED_ATTRS = new Set([
+  'aria-label',
+  'clip-path',
+  'cx',
+  'cy',
+  'd',
+  'dominant-baseline',
+  'fill',
+  'fill-opacity',
+  'font-family',
+  'font-size',
+  'font-weight',
+  'gradienttransform',
+  'gradientunits',
+  'height',
+  'href',
+  'id',
+  'mask',
+  'offset',
+  'opacity',
+  'patterncontentunits',
+  'patternunits',
+  'points',
+  'preserveaspectratio',
+  'r',
+  'role',
+  'rx',
+  'ry',
+  'stop-color',
+  'stop-opacity',
+  'stroke',
+  'stroke-dasharray',
+  'stroke-dashoffset',
+  'stroke-linecap',
+  'stroke-linejoin',
+  'stroke-miterlimit',
+  'stroke-opacity',
+  'stroke-width',
+  'text-anchor',
+  'transform',
+  'version',
+  'viewbox',
+  'width',
+  'x',
+  'x1',
+  'x2',
+  'y',
+  'y1',
+  'y2',
+  'xmlns',
+]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -64,6 +153,23 @@ function isPostDetail(value: unknown): value is PostDetailOutput {
 
 function isPostDeck(value: unknown): value is RenderPostDeckOutput {
   return isObject(value) && Array.isArray(value.posts) && typeof value.result_count === 'number';
+}
+
+function componentMediaFrom(meta: unknown): ComponentMediaMeta {
+  if (!isObject(meta)) {
+    return EMPTY_COMPONENT_MEDIA;
+  }
+  const value = meta[COMPONENT_MEDIA_META_KEY];
+  if (!isObject(value) || !isObject(value.inline_svgs)) {
+    return EMPTY_COMPONENT_MEDIA;
+  }
+  const inlineSvgs: Record<string, string> = {};
+  for (const [key, svg] of Object.entries(value.inline_svgs)) {
+    if (typeof svg === 'string' && svg.length > 0 && svg.length <= 120_000) {
+      inlineSvgs[key] = svg;
+    }
+  }
+  return { inline_svgs: inlineSvgs };
 }
 
 function escapeHtml(value: unknown): string {
@@ -147,6 +253,73 @@ function renderMarkdown(value: string): string {
   return template.innerHTML;
 }
 
+function sanitizeInlineSvg(source: string, assetKey: string): string | null {
+  if (!source || source.length > 120_000) {
+    return null;
+  }
+  const purified = DOMPurify.sanitize(source, {
+    USE_PROFILES: { svg: true, svgFilters: false },
+    FORBID_TAGS: ['script', 'style', 'foreignObject', 'iframe', 'object', 'embed', 'link'],
+    FORBID_ATTR: ['style'],
+  });
+  const documentNode = new DOMParser().parseFromString(purified, 'image/svg+xml');
+  const rootNode = documentNode.documentElement;
+  if (rootNode.localName.toLowerCase() !== 'svg' || documentNode.querySelector('parsererror')) {
+    return null;
+  }
+
+  for (const element of [...rootNode.querySelectorAll('*')].reverse()) {
+    if (!SVG_ALLOWED_TAGS.has(element.localName.toLowerCase())) {
+      element.remove();
+    }
+  }
+
+  const idMap = new Map<string, string>();
+  const prefix = `wp-${assetKey.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 72)}-`;
+  for (const element of [rootNode, ...rootNode.querySelectorAll('*')]) {
+    for (const attribute of [...element.attributes]) {
+      const name = attribute.localName.toLowerCase();
+      const value = attribute.value.trim();
+      if (name.startsWith('on') || !SVG_ALLOWED_ATTRS.has(name)) {
+        element.removeAttribute(attribute.name);
+        continue;
+      }
+      if (/javascript:|data:|vbscript:|https?:\/\//i.test(value)) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+    const id = element.getAttribute('id');
+    if (id) {
+      const namespaced = `${prefix}${id.replace(/[^A-Za-z0-9_.:-]/g, '-')}`;
+      idMap.set(id, namespaced);
+      element.setAttribute('id', namespaced);
+    }
+  }
+
+  for (const element of [rootNode, ...rootNode.querySelectorAll('*')]) {
+    for (const attribute of [...element.attributes]) {
+      let value = attribute.value;
+      if (attribute.localName.toLowerCase() === 'href' && value.startsWith('#')) {
+        const replacement = idMap.get(value.slice(1));
+        if (!replacement) {
+          element.removeAttribute(attribute.name);
+          continue;
+        }
+        value = `#${replacement}`;
+      }
+      value = value.replace(/url\(\s*#([^\s)]+)\s*\)/g, (match, id: string) => {
+        const replacement = idMap.get(id);
+        return replacement ? `url(#${replacement})` : 'none';
+      });
+      element.setAttribute(attribute.name, value);
+    }
+  }
+
+  rootNode.setAttribute('aria-hidden', 'true');
+  rootNode.setAttribute('focusable', 'false');
+  return new XMLSerializer().serializeToString(rootNode);
+}
+
 function categoryPresentation(post: PostSummary): { label: string; image: IconNode } {
   const presentations: Record<string, { label: string; image: IconNode }> = {
     text_post: { label: 'Text', image: FileText },
@@ -215,74 +388,117 @@ function formatKarma(value: string | null): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(parsed);
 }
 
-function collectMedia(post: PostSummary): Array<{ url: string; kind: 'image' | 'audio' | 'video' | 'other' }> {
+function mediaKind(post: PostSummary, hint: string, pathname: string): MediaKind {
+  if (hint.includes('svg') || hint.includes('image') || /\.(avif|gif|jpe?g|png|webp|svg)$/.test(pathname)) {
+    return 'image';
+  }
+  if (hint.includes('audio') || /\.(aac|flac|m4a|mp3|oga|ogg|wav)$/.test(pathname)) {
+    return 'audio';
+  }
+  if (hint.includes('video') || /\.(m4v|mov|mp4|ogv|webm)$/.test(pathname)) {
+    return 'video';
+  }
+  if (hint.includes('document') || /\.(pdf)$/.test(pathname)) {
+    return 'document';
+  }
+  if (post.category === 'music') {
+    return 'audio';
+  }
+  if (post.category === 'video') {
+    return 'video';
+  }
+  return 'image';
+}
+
+function collectMedia(post: PostSummary, componentMedia: ComponentMediaMeta): MediaItem[] {
   if (!post.media) {
     return [];
   }
-  const candidates: Array<{ url: string | null; contentType?: string | null; mediaType?: string | null }> = [
-    { url: post.media.primary_url },
-    ...post.media.urls.map((url) => ({ url })),
+  const candidates: Array<{
+    assetKey: string | null;
+    url: string | null;
+    thumbnailUrl?: string | null;
+    contentType?: string | null;
+    mediaType?: string | null;
+    alt?: string;
+    inlineSvg?: boolean;
+  }> = [
     ...post.media.assets.map((asset) => ({
+      assetKey: asset.asset_key,
       url: asset.url,
+      thumbnailUrl: asset.thumbnail_url,
       contentType: asset.content_type,
       mediaType: asset.media_type,
+      alt: asset.alt,
+      inlineSvg: asset.inline_svg,
     })),
+    { assetKey: null, url: post.media.primary_url },
+    ...post.media.urls.map((url) => ({ assetKey: null, url })),
   ];
   const seen = new Set<string>();
-  const media: Array<{ url: string; kind: 'image' | 'audio' | 'video' | 'other' }> = [];
+  const media: MediaItem[] = [];
   for (const candidate of candidates) {
     const url = safeUrl(candidate.url);
-    if (!url || seen.has(url)) {
+    const svgSource = candidate.assetKey ? componentMedia.inline_svgs[candidate.assetKey] : undefined;
+    const svg = candidate.inlineSvg && svgSource && candidate.assetKey
+      ? sanitizeInlineSvg(svgSource, candidate.assetKey)
+      : null;
+    const dedupeKey = url ?? (candidate.assetKey ? `svg:${candidate.assetKey}` : null);
+    if (!dedupeKey || seen.has(dedupeKey)) {
       continue;
     }
-    seen.add(url);
-    const hint = `${candidate.contentType ?? ''} ${candidate.mediaType ?? ''} ${post.media.kind ?? ''}`.toLowerCase();
-    const pathname = new URL(url).pathname.toLowerCase();
-    let kind: 'image' | 'audio' | 'video' | 'other' = 'other';
-    if (hint.includes('image') || /\.(avif|gif|jpe?g|png|webp|svg)$/.test(pathname)) {
-      kind = 'image';
-    } else if (hint.includes('audio') || /\.(aac|flac|m4a|mp3|ogg|wav)$/.test(pathname)) {
-      kind = 'audio';
-    } else if (hint.includes('video') || /\.(m4v|mov|mp4|ogv|webm)$/.test(pathname)) {
-      kind = 'video';
-    } else if (post.category === 'image_pdf') {
-      kind = 'image';
-    } else if (post.category === 'music') {
-      kind = 'audio';
-    } else if (post.category === 'video') {
-      kind = 'video';
+    if (!url && !candidate.inlineSvg) {
+      continue;
     }
-    media.push({ url, kind });
+    seen.add(dedupeKey);
+    const hint = `${candidate.contentType ?? ''} ${candidate.mediaType ?? ''} ${post.media.kind ?? ''}`.toLowerCase();
+    const pathname = url ? new URL(url).pathname.toLowerCase() : '';
+    media.push({
+      assetKey: candidate.assetKey,
+      url,
+      thumbnailUrl: safeUrl(candidate.thumbnailUrl),
+      contentType: candidate.contentType ?? null,
+      alt: candidate.alt || post.title || 'Wiplash post media',
+      kind: mediaKind(post, hint, pathname),
+      svg,
+      svgUnavailable: Boolean(candidate.inlineSvg && !svg),
+    });
   }
   return media;
 }
 
-function renderMedia(post: PostSummary): string {
-  const media = collectMedia(post);
+function renderMedia(post: PostSummary, componentMedia: ComponentMediaMeta): string {
+  const media = collectMedia(post, componentMedia);
   const images = media.filter((item) => item.kind === 'image').slice(0, 6);
   const audio = media.find((item) => item.kind === 'audio');
   const video = media.find((item) => item.kind === 'video');
   const output: string[] = [];
 
   if (images.length > 0) {
-    output.push(`<div class="post-media__gallery" aria-label="Post image gallery">${images
-      .map(
-        (item) =>
-          `<div class="post-media__image"><img src="${escapeHtml(item.url)}" alt="" loading="lazy" decoding="async"></div>`,
-      )
+    output.push(`<div class="post-media__gallery ${images.length === 1 ? 'post-media__gallery--single' : ''}" aria-label="Post image gallery">${images
+      .map((item) => {
+        if (item.svg) {
+          return `<div class="post-media__image post-media__image--svg" role="img" aria-label="${escapeHtml(item.alt)}">${item.svg}</div>`;
+        }
+        if (item.svgUnavailable) {
+          return `<div class="post-media__unavailable">${icon(Image, 18)}<span>SVG preview unavailable</span></div>`;
+        }
+        return `<div class="post-media__image"><img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt)}" loading="lazy" decoding="async"></div>`;
+      })
       .join('')}</div>`);
     if (images.length > 1) {
-      output.push(`<div class="post-media__count">${images.length} images</div>`);
+      output.push(`<div class="post-media__count">${images.length} gallery items</div>`);
     }
   }
-  if (audio) {
+  if (audio?.url) {
     output.push(
-      `<audio controls preload="metadata" src="${escapeHtml(audio.url)}">Your client cannot play this audio.</audio>`,
+      `<div class="post-media__player"><div class="post-media__player-label">${icon(AudioLines, 14)}<span>Audio</span></div><audio controls preload="metadata" src="${escapeHtml(audio.url)}" aria-label="${escapeHtml(audio.alt)}">Your client cannot play this audio.</audio></div>`,
     );
   }
-  if (video) {
+  if (video?.url) {
+    const poster = video.thumbnailUrl ? ` poster="${escapeHtml(video.thumbnailUrl)}"` : '';
     output.push(
-      `<video controls playsinline preload="metadata" src="${escapeHtml(video.url)}">Your client cannot play this video.</video>`,
+      `<div class="post-media__player"><div class="post-media__player-label">${icon(Video, 14)}<span>Video</span></div><video controls playsinline preload="metadata" src="${escapeHtml(video.url)}"${poster} aria-label="${escapeHtml(video.alt)}">Your client cannot play this video.</video></div>`,
     );
   }
   return output.length > 0 ? `<div class="post-media">${output.join('')}</div>` : '';
@@ -306,7 +522,7 @@ function renderActions(post: PostSummary): string {
   </div>`;
 }
 
-function renderPostCard(post: PostSummary, detailed = false): string {
+function renderPostCard(post: PostSummary, componentMedia: ComponentMediaMeta, detailed = false): string {
   const category = categoryPresentation(post);
   const body = detailed && 'body' in post ? String(post.body || post.excerpt) : post.excerpt;
   const author = displayAuthor(post);
@@ -337,7 +553,7 @@ function renderPostCard(post: PostSummary, detailed = false): string {
     <div class="post-card__content">
       ${title}
       ${body ? `<div class="post-copy ${detailed ? '' : 'post-copy--excerpt'}">${renderMarkdown(body)}</div>` : ''}
-      ${renderMedia(post)}
+      ${renderMedia(post, componentMedia)}
       ${topics}
       <footer class="post-card__footer">
         ${renderMetrics(post)}
@@ -420,12 +636,12 @@ function shellHeader(label: string, count?: number): string {
   </header>`;
 }
 
-function renderPayload(payload: unknown): void {
+function renderPayload(payload: unknown, componentMedia = EMPTY_COMPONENT_MEDIA): void {
   if (isPostDetail(payload)) {
     root.innerHTML = `<section class="post-deck-shell">
       ${shellHeader('Post')}
       <div class="post-deck-list">
-        ${renderPostCard(payload.post, true)}
+        ${renderPostCard(payload.post, componentMedia, true)}
         ${renderFeedback(payload)}
         ${renderRelated(payload)}
       </div>
@@ -440,7 +656,7 @@ function renderPayload(payload: unknown): void {
     }
     root.innerHTML = `<section class="post-deck-shell">
       ${shellHeader('Post deck', payload.result_count)}
-      <div class="post-deck-list">${payload.posts.map((post) => renderPostCard(post)).join('')}</div>
+      <div class="post-deck-list">${payload.posts.map((post) => renderPostCard(post, componentMedia)).join('')}</div>
     </section>`;
     return;
   }
@@ -522,8 +738,28 @@ root.addEventListener('keydown', (event) => {
   void openUrl(target.dataset.openUrl).catch(() => undefined);
 });
 
+root.addEventListener(
+  'error',
+  (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement || target instanceof HTMLMediaElement)) {
+      return;
+    }
+    const container = target.closest<HTMLElement>('.post-media__image, .post-media__player');
+    if (!container || container.querySelector('.post-media__unavailable')) {
+      return;
+    }
+    target.hidden = true;
+    container.insertAdjacentHTML(
+      'beforeend',
+      `<div class="post-media__unavailable">${icon(ShieldAlert, 16)}<span>Media preview unavailable</span></div>`,
+    );
+  },
+  true,
+);
+
 app.ontoolresult = (result) => {
-  renderPayload(result.structuredContent);
+  renderPayload(result.structuredContent, componentMediaFrom(result._meta));
 };
 app.onhostcontextchanged = applyHostContext;
 app.ontoolcancelled = () => {
@@ -533,7 +769,11 @@ app.onteardown = async () => ({});
 const preview = window.__WIPLASH_MCP_PREVIEW__;
 const legacyOutput = window.openai?.toolOutput;
 if (preview !== undefined || legacyOutput !== undefined) {
-  renderPayload(preview ?? legacyOutput);
+  const previewResult = isObject(preview) && 'structuredContent' in preview ? preview : null;
+  renderPayload(
+    previewResult?.structuredContent ?? preview ?? legacyOutput,
+    componentMediaFrom(previewResult?._meta),
+  );
 }
 
 if (window.parent !== window && preview === undefined) {

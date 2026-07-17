@@ -1,8 +1,11 @@
 import { isObject, type JsonObject } from './wiplash-client.js';
+import type { ComponentMediaMeta } from './component-media.js';
 
 const POST_EXCERPT_LIMIT = 1_200;
 const POST_BODY_LIMIT = 30_000;
 const FEEDBACK_BODY_LIMIT = 6_000;
+const INLINE_SVG_MAX_CHARS = 120_000;
+const COMPONENT_MEDIA_MAX_CHARS = 960_000;
 
 function valueAt(object: JsonObject, key: string): unknown {
   return object[key];
@@ -102,6 +105,14 @@ function authorFromPost(post: JsonObject, baseUrl: URL) {
   };
 }
 
+function postIdentity(post: JsonObject): string {
+  return textValue(valueAt(post, 'post_key')) ?? textValue(valueAt(post, 'id')) ?? 'unknown-post';
+}
+
+function mediaAssetKey(post: JsonObject, index: number): string {
+  return `${postIdentity(post)}:${index}`;
+}
+
 function mediaFromPost(post: JsonObject, baseUrl: URL) {
   const primaryUrl = publicUrl(valueAt(post, 'media_url'), baseUrl);
   const urls = stringList(valueAt(post, 'media_urls'), 8)
@@ -110,14 +121,20 @@ function mediaFromPost(post: JsonObject, baseUrl: URL) {
   const assets = arrayAt(post, 'media_assets')
     .filter(isObject)
     .slice(0, 8)
-    .map((asset) => ({
+    .map((asset, index) => ({
+      asset_key: mediaAssetKey(post, index),
       media_type: textValue(valueAt(asset, 'media_type')) ?? textValue(valueAt(asset, 'type')),
       url: publicUrl(
         valueAt(asset, 'url') ?? valueAt(asset, 'download_url') ?? valueAt(asset, 'asset_url'),
         baseUrl,
       ),
+      thumbnail_url: publicUrl(valueAt(asset, 'thumbnail_url'), baseUrl),
       filename: textValue(valueAt(asset, 'filename')),
       content_type: textValue(valueAt(asset, 'content_type')),
+      alt: truncate(textValue(valueAt(asset, 'alt')) ?? textValue(valueAt(asset, 'title')), 240).text,
+      inline_svg:
+        (textValue(valueAt(asset, 'media_type')) ?? textValue(valueAt(asset, 'type')))?.toLowerCase() === 'svg' &&
+        Boolean(textValue(valueAt(asset, 'svg')) ?? textValue(valueAt(asset, 'sanitized_svg'))),
     }));
 
   if (!primaryUrl && urls.length === 0 && assets.length === 0 && !textValue(valueAt(post, 'media_kind'))) {
@@ -130,6 +147,39 @@ function mediaFromPost(post: JsonObject, baseUrl: URL) {
     urls,
     assets,
   };
+}
+
+export function presentComponentMediaMeta(
+  postsRaw: unknown[],
+  options: { maxSvgAssetsPerPost?: number; maxTotalChars?: number } = {},
+): ComponentMediaMeta {
+  const inlineSvgs: Record<string, string> = {};
+  const maxSvgAssetsPerPost = options.maxSvgAssetsPerPost ?? 8;
+  const maxTotalChars = options.maxTotalChars ?? COMPONENT_MEDIA_MAX_CHARS;
+  let totalChars = 0;
+
+  for (const rawPost of postsRaw) {
+    const post = isObject(rawPost) ? rawPost : {};
+    let postSvgCount = 0;
+    const assets = arrayAt(post, 'media_assets').filter(isObject);
+    for (const [index, asset] of assets.entries()) {
+      const mediaType = (
+        textValue(valueAt(asset, 'media_type')) ?? textValue(valueAt(asset, 'type')) ?? ''
+      ).toLowerCase();
+      const svg = textValue(valueAt(asset, 'svg')) ?? textValue(valueAt(asset, 'sanitized_svg'));
+      if (mediaType !== 'svg' || !svg || svg.length > INLINE_SVG_MAX_CHARS || postSvgCount >= maxSvgAssetsPerPost) {
+        continue;
+      }
+      if (totalChars + svg.length > maxTotalChars) {
+        return { inline_svgs: inlineSvgs };
+      }
+      inlineSvgs[mediaAssetKey(post, index)] = svg;
+      totalChars += svg.length;
+      postSvgCount += 1;
+    }
+  }
+
+  return { inline_svgs: inlineSvgs };
 }
 
 export function presentPostSummary(raw: unknown, baseUrl: URL) {

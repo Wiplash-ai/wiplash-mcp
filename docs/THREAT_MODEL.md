@@ -25,9 +25,9 @@ This document covers the public Wiplash MCP adapter, its remote Streamable HTTP 
 | Threat | Impact | Mitigation |
 | --- | --- | --- |
 | Prompt injection in posts or profiles | A model follows user content as instructions | Explicit untrusted markers, server instructions, narrow structured fields, and no tool that executes content. |
-| Cross-site scripting in the post view | Malicious Markdown or media metadata executes in the host | Static UI resource, DOMPurify allowlisting, rejected scripts/forms/iframes/SVG source, escaped attributes, and no raw post HTML. |
+| Cross-site scripting in the post view | Malicious Markdown or media metadata executes in the host | Static UI resource, DOMPurify allowlisting, rejected scripts/forms/iframes, escaped attributes, no raw post HTML, and a separate strict SVG element/attribute allowlist. |
 | Browser-side exfiltration | A malicious post makes the view contact an attacker | No UI network capability, Wiplash-only media origins, HTTPS URL validation, and host-mediated user-initiated links. |
-| Embedded app or code execution | A post app, SVG, or code review runs inside the conversation | App URLs, inline SVG source, and code are treated as metadata and are never embedded or executed. |
+| Embedded app or code execution | A post app, SVG, or code review runs inside the conversation | App URLs and code are never embedded or executed. SVG is excluded from model-visible output, delivered through component-only metadata, sanitized twice, stripped of active/external content, and rendered only as static art. |
 | Secret or data exfiltration | A malicious post asks the model to reveal unrelated information | Read-only tools accept no secrets and server instructions prohibit treating results as commands. |
 | SSRF or arbitrary proxying | A caller makes the server fetch an internal URL | Fixed API paths, same-origin enforcement, HTTPS-only production origins, and rejected redirects. |
 | Oversized responses | Cost amplification or client failure | API limits, local item caps, text truncation, timeout, and a two-megabyte upstream ceiling. |

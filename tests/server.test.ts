@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { COMPONENT_MEDIA_META_KEY } from '../src/component-media.js';
 import { createWiplashMcpServer } from '../src/server.js';
 import { WiplashClient, type FetchLike } from '../src/wiplash-client.js';
 
@@ -26,6 +27,53 @@ const post = {
   created_at: '2026-07-17T12:00:00Z',
 };
 
+const svgPost = {
+  ...post,
+  id: '7f64ef5d-4d2c-4b31-9e4d-4a2ec070bdeb',
+  post_key: 'svg-media-post',
+  title: 'Static SVG gallery study',
+  category: 'image_pdf',
+  category_label: 'image/gallery',
+  media_kind: 'svg',
+  media_url: 'inline:svg',
+  media_urls: ['/api/v1/posts/media/ed7394c6-6a1b-46e2-a16e-7a076b6207fa'],
+  media_assets: [
+    {
+      media_type: 'svg',
+      url: null,
+      thumbnail_url: null,
+      alt: 'A teal circle and a purple square on a dark field.',
+      svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240"><rect width="400" height="240" fill="#07101a"/><circle cx="130" cy="120" r="70" fill="#00a9d6"/><rect x="230" y="55" width="130" height="130" fill="#7b61ff"/></svg>',
+    },
+    {
+      media_type: 'image',
+      url: '/api/v1/posts/media/ed7394c6-6a1b-46e2-a16e-7a076b6207fa',
+      thumbnail_url: '/api/v1/posts/media/ed7394c6-6a1b-46e2-a16e-7a076b6207fa/thumbnail',
+      alt: 'A hosted gallery image.',
+    },
+  ],
+};
+
+const videoPost = {
+  ...post,
+  id: 'de735eb4-8640-420c-90af-076648eb8488',
+  post_key: 'video-media-post',
+  title: 'A short Wiplash video',
+  category: 'video',
+  category_label: 'video',
+  media_kind: 'video',
+  media_url: '/api/v1/posts/media/ec98c81d-d1ec-4a0f-ae4d-7a8bd689f9e3',
+  media_urls: ['/api/v1/posts/media/ec98c81d-d1ec-4a0f-ae4d-7a8bd689f9e3'],
+  media_assets: [
+    {
+      media_type: 'video',
+      url: '/api/v1/posts/media/ec98c81d-d1ec-4a0f-ae4d-7a8bd689f9e3',
+      thumbnail_url: '/api/v1/posts/media/ec98c81d-d1ec-4a0f-ae4d-7a8bd689f9e3/thumbnail',
+      alt: 'A short generated animation.',
+    },
+  ],
+};
+
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -47,8 +95,13 @@ describe('Wiplash MCP tools', () => {
         });
       }
       if (url.pathname.startsWith('/api/v1/posts/')) {
+        const requestedPost = url.pathname.endsWith('/svg-media-post')
+          ? svgPost
+          : url.pathname.endsWith('/video-media-post')
+            ? videoPost
+            : post;
         return jsonResponse({
-          post,
+          post: requestedPost,
           feedback: [
             {
               id: 'feedback-1',
@@ -257,6 +310,67 @@ describe('Wiplash MCP tools', () => {
           body: 'Useful feedback.',
         },
       ],
+    });
+  });
+
+  it('keeps inline SVG private to the component while exposing safe media descriptors', async () => {
+    const result = await mcpClient.callTool({
+      name: 'render_post',
+      arguments: { post_id: 'svg-media-post' },
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      post: {
+        post_id: 'svg-media-post',
+        media: {
+          kind: 'svg',
+          assets: [
+            {
+              asset_key: 'svg-media-post:0',
+              media_type: 'svg',
+              url: null,
+              alt: 'A teal circle and a purple square on a dark field.',
+              inline_svg: true,
+            },
+            {
+              asset_key: 'svg-media-post:1',
+              media_type: 'image',
+              url: 'https://wiplash.ai/api/v1/posts/media/ed7394c6-6a1b-46e2-a16e-7a076b6207fa',
+              thumbnail_url:
+                'https://wiplash.ai/api/v1/posts/media/ed7394c6-6a1b-46e2-a16e-7a076b6207fa/thumbnail',
+              inline_svg: false,
+            },
+          ],
+        },
+      },
+    });
+    expect(JSON.stringify(result.structuredContent)).not.toContain('<svg');
+    const componentMedia = result._meta?.[COMPONENT_MEDIA_META_KEY] as
+      | { inline_svgs?: Record<string, string> }
+      | undefined;
+    expect(componentMedia?.inline_svgs?.['svg-media-post:0']).toContain('<svg');
+  });
+
+  it('preserves video poster metadata for the interactive player', async () => {
+    const result = await mcpClient.callTool({
+      name: 'render_post',
+      arguments: { post_id: 'video-media-post' },
+    });
+
+    expect(result.structuredContent).toMatchObject({
+      post: {
+        media: {
+          assets: [
+            {
+              media_type: 'video',
+              url: 'https://wiplash.ai/api/v1/posts/media/ec98c81d-d1ec-4a0f-ae4d-7a8bd689f9e3',
+              thumbnail_url:
+                'https://wiplash.ai/api/v1/posts/media/ec98c81d-d1ec-4a0f-ae4d-7a8bd689f9e3/thumbnail',
+            },
+          ],
+        },
+      },
     });
   });
 

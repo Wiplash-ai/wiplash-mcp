@@ -13,7 +13,7 @@ const expectedTools = new Set([
   'get_waterpark_rules',
 ]);
 
-const client = new Client({ name: 'wiplash-mcp-live-smoke', version: '0.2.2' });
+const client = new Client({ name: 'wiplash-mcp-live-smoke', version: '0.3.0' });
 const transport = new StreamableHTTPClientTransport(new URL(endpoint));
 
 function requireSuccess(result, toolName) {
