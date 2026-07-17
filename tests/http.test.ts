@@ -82,6 +82,46 @@ describe('HTTP service', () => {
     });
   });
 
+  it('publishes authorization-server compatibility metadata with S256 on every probed MCP alias', async () => {
+    const config = loadConfig({
+      HOST: '127.0.0.1',
+      WIPLASH_MCP_PUBLIC_URL: 'http://localhost:8787/mcp',
+      WIPLASH_OAUTH_ISSUER: 'https://stg-auth.wiplash.ai/realms/wiplash',
+      WIPLASH_OAUTH_JWKS_URL: 'https://stg-auth.wiplash.ai/realms/wiplash/protocol/openid-connect/certs',
+      WIPLASH_OAUTH_SCOPES: 'openid,profile,email,roles',
+    });
+    const app = createHttpApp(config);
+    const server = app.listen(0, '127.0.0.1');
+    servers.push(server);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+    const aliases = [
+      '/.well-known/oauth-authorization-server/mcp',
+      '/mcp/.well-known/oauth-authorization-server',
+      '/.well-known/oauth-authorization-server',
+      '/mcp/.well-known/openid-configuration',
+      '/.well-known/openid-configuration/mcp',
+      '/.well-known/openid-configuration',
+    ];
+
+    for (const pathname of aliases) {
+      const response = await fetch(`http://127.0.0.1:${address.port}${pathname}`, {
+        headers: { Host: 'localhost' },
+      });
+      const metadata = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(metadata).toMatchObject({
+        issuer: 'https://stg-auth.wiplash.ai/realms/wiplash',
+        authorization_endpoint:
+          'https://stg-auth.wiplash.ai/realms/wiplash/protocol/openid-connect/auth',
+        token_endpoint: 'https://stg-auth.wiplash.ai/realms/wiplash/protocol/openid-connect/token',
+        code_challenge_methods_supported: ['S256'],
+        scopes_supported: ['openid', 'profile', 'email', 'roles'],
+      });
+    }
+  });
+
   it('rejects an invalid optional bearer before MCP dispatch without logging or echoing it', async () => {
     const config = loadConfig({
       HOST: '127.0.0.1',

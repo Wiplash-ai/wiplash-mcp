@@ -101,6 +101,24 @@ export class KeycloakAccessTokenVerifier implements OAuthTokenVerifier {
   }
 }
 
+export function authorizationServerMetadata(config: AppConfig) {
+  const issuer = config.oauthIssuer.toString();
+  const endpoint = (pathname: string) => `${issuer}${pathname}`;
+
+  return {
+    issuer,
+    authorization_endpoint: endpoint('/protocol/openid-connect/auth'),
+    token_endpoint: endpoint('/protocol/openid-connect/token'),
+    userinfo_endpoint: endpoint('/protocol/openid-connect/userinfo'),
+    jwks_uri: config.oauthJwksUrl.toString(),
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code', 'refresh_token'],
+    token_endpoint_auth_methods_supported: ['none', 'client_secret_basic', 'client_secret_post'],
+    code_challenge_methods_supported: ['S256'],
+    scopes_supported: config.oauthScopes,
+  };
+}
+
 export function protectedResourceMetadataUrl(publicMcpUrl: URL): URL {
   const url = new URL(publicMcpUrl.origin);
   const resourcePath = publicMcpUrl.pathname === '/' ? '' : publicMcpUrl.pathname.replace(/\/$/, '');

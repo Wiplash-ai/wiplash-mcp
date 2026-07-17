@@ -37,6 +37,18 @@ WIPLASH_MCP_BUILD_SHA="$(git rev-parse HEAD)" \
 The stage and production OAuth audiences are intentionally different. Never
 accept a stage token at the production MCP endpoint or vice versa.
 
+Keycloak 24 does not expose every RFC 8414 metadata URL form used during MCP
+OAuth discovery. Install `keycloak-metadata-aliases.nginx.conf` inside the TLS
+server block for each Wiplash Keycloak hostname. The aliases proxy only to the
+realm's existing OIDC discovery document; authorization and token requests
+continue to go directly to Keycloak.
+
+ChatGPT developer mode also probes authorization-server metadata aliases on
+the MCP resource origin. The MCP service answers those exact aliases with a
+minimal document that keeps Keycloak as the issuer and advertises only the
+authorization-code flow with PKCE `S256`. Do not replace the issuer or token
+endpoints with MCP-origin URLs.
+
 ## Verify
 
 ```bash

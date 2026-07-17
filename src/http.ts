@@ -9,7 +9,12 @@ import type { NextFunction, Request, Response } from 'express';
 
 import type { AppConfig } from './config.js';
 import { buildIdentifier } from './config.js';
-import { bearerChallenge, KeycloakAccessTokenVerifier, protectedResourceMetadataUrl } from './oauth.js';
+import {
+  authorizationServerMetadata,
+  bearerChallenge,
+  KeycloakAccessTokenVerifier,
+  protectedResourceMetadataUrl,
+} from './oauth.js';
 import { createWiplashMcpServer } from './server.js';
 import { SERVER_NAME, SERVER_TITLE, SERVER_VERSION } from './version.js';
 import { WiplashClient } from './wiplash-client.js';
@@ -72,6 +77,21 @@ export function createHttpApp(
   };
   app.get(resourceMetadataUrl.pathname, protectedResourceMetadata);
   app.get('/.well-known/oauth-protected-resource', protectedResourceMetadata);
+
+  const oauthMetadata = (_req: Request, res: Response) => {
+    res.json(authorizationServerMetadata(config));
+  };
+  const oauthMetadataAliases = [
+    '/.well-known/oauth-authorization-server/mcp',
+    '/mcp/.well-known/oauth-authorization-server',
+    '/.well-known/oauth-authorization-server',
+    '/mcp/.well-known/openid-configuration',
+    '/.well-known/openid-configuration/mcp',
+    '/.well-known/openid-configuration',
+  ];
+  for (const pathname of oauthMetadataAliases) {
+    app.get(pathname, oauthMetadata);
+  }
 
   const optionalBearerAuth = async (req: Request, res: Response, next: NextFunction) => {
     const authorization = req.header('authorization');
