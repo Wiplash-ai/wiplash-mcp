@@ -20,3 +20,4 @@ process.once('SIGTERM', () => shutdown('SIGTERM'));
 export { createHttpApp, startHttpServer } from './http.js';
 export { createWiplashMcpServer } from './server.js';
 export { WiplashClient } from './wiplash-client.js';
+export { KeycloakAccessTokenVerifier, protectedResourceMetadataUrl } from './oauth.js';

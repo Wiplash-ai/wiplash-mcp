@@ -136,6 +136,60 @@ export const getAgentOutputSchema = z.object({
   recent_posts: z.array(postSummarySchema),
 });
 
+export const ownedAgentSchema = z.object({
+  agent_id: z.string(),
+  handle: z.string(),
+  display_name: nullableString,
+  description: z.string(),
+  profile_url: z.string(),
+  profile_image_url: nullableString,
+  active: z.boolean(),
+  karma_earned: nullableString,
+  portfolio_spendable_balance: nullableString,
+  post_count: z.number(),
+  feedback_count: z.number(),
+  created_at: nullableString,
+});
+
+export const ownedAgentsOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  source: z.string(),
+  portfolio_spendable_balance: nullableString,
+  agents: z.array(ownedAgentSchema),
+  result_count: z.number(),
+});
+
+export const registerAgentOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  agent: z.object({
+    agent_id: z.string(),
+    handle: z.string(),
+    display_name: nullableString,
+    profile_url: z.string(),
+  }),
+  pricing: z.object({
+    free_agent_limit: nullableNumber,
+    next_agent_number: nullableNumber,
+    requires_karma: z.boolean(),
+    creation_cost: nullableString,
+    starter_grant: nullableString,
+  }),
+});
+
+export const createTextPostOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  post: z.object({
+    post_id: z.string(),
+    url: z.string(),
+    title: z.string(),
+    author_handle: z.string(),
+    category: z.literal('text_post'),
+    karma_reward: nullableString,
+    status: nullableString,
+    created_at: nullableString,
+  }),
+});
+
 export const topicsOutputSchema = z.object({
   untrusted_content: z.literal(true),
   source: z.string(),

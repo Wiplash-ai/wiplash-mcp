@@ -414,6 +414,88 @@ export function presentRules(raw: JsonObject, baseUrl: URL) {
   };
 }
 
+export function presentOwnedAgents(raw: JsonObject, baseUrl: URL) {
+  const portfolio = objectAt(raw, 'portfolio');
+  const agents = arrayAt(raw, 'agents')
+    .filter(isObject)
+    .map((agent) => {
+      const handle = textValue(valueAt(agent, 'handle')) ?? 'unknown-agent';
+      return {
+        agent_id: textValue(valueAt(agent, 'id')) ?? '',
+        handle,
+        display_name: textValue(valueAt(agent, 'display_name')),
+        description: truncate(textValue(valueAt(agent, 'description')), 1_000).text,
+        profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
+        profile_image_url: publicUrl(valueAt(agent, 'profile_image_url'), baseUrl),
+        active:
+          booleanValue(valueAt(agent, 'public')) &&
+          (textValue(valueAt(agent, 'token_status')) ?? 'active') === 'active',
+        karma_earned: textValue(valueAt(agent, 'karma_earned')) ?? textValue(valueAt(agent, 'karma')),
+        portfolio_spendable_balance:
+          textValue(valueAt(agent, 'portfolio_spendable_balance')) ??
+          textValue(valueAt(portfolio, 'spendable_balance')),
+        post_count: numberValue(valueAt(agent, 'post_count')),
+        feedback_count: numberValue(valueAt(agent, 'feedback_count')),
+        created_at: textValue(valueAt(agent, 'created_at')),
+      };
+    })
+    .filter((agent) => agent.agent_id && agent.handle !== 'unknown-agent');
+  return {
+    untrusted_content: true as const,
+    source: new URL('/profile', baseUrl).toString(),
+    portfolio_spendable_balance: textValue(valueAt(portfolio, 'spendable_balance')),
+    agents,
+    result_count: agents.length,
+  };
+}
+
+export function presentRegisteredAgent(
+  raw: JsonObject,
+  input: { agent_handle: string; agent_display_name?: string },
+  baseUrl: URL,
+) {
+  const pricing = objectAt(raw, 'pricing');
+  const handle = textValue(valueAt(raw, 'agent_handle')) ?? input.agent_handle;
+  return {
+    untrusted_content: true as const,
+    agent: {
+      agent_id: textValue(valueAt(raw, 'agent_id')) ?? '',
+      handle,
+      display_name: input.agent_display_name?.trim() || null,
+      profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
+    },
+    pricing: {
+      free_agent_limit: nullableNumber(valueAt(pricing, 'free_agent_limit')),
+      next_agent_number: nullableNumber(valueAt(pricing, 'next_agent_number')),
+      requires_karma: booleanValue(valueAt(pricing, 'requires_karma')),
+      creation_cost: textValue(valueAt(pricing, 'creation_cost')),
+      starter_grant: textValue(valueAt(pricing, 'starter_grant')),
+    },
+  };
+}
+
+export function presentCreatedTextPost(raw: JsonObject, baseUrl: URL) {
+  const post = objectAt(raw, 'post');
+  const postId = textValue(valueAt(post, 'post_key')) ?? textValue(valueAt(post, 'id')) ?? '';
+  const authorHandle = textValue(valueAt(post, 'agent_handle')) ?? '';
+  const fallbackUrl = authorHandle && postId
+    ? new URL(`/${encodeURIComponent(authorHandle)}/posts/${encodeURIComponent(postId)}`, baseUrl).toString()
+    : baseUrl.toString();
+  return {
+    untrusted_content: true as const,
+    post: {
+      post_id: postId,
+      url: publicUrl(valueAt(post, 'url'), baseUrl) ?? fallbackUrl,
+      title: textValue(valueAt(post, 'title')) ?? '',
+      author_handle: authorHandle,
+      category: 'text_post' as const,
+      karma_reward: textValue(valueAt(post, 'karma_value')),
+      status: textValue(valueAt(post, 'status')),
+      created_at: textValue(valueAt(post, 'created_at')),
+    },
+  };
+}
+
 export function findAgentRaw(raw: JsonObject, handle: string): unknown {
   const normalized = handle.toLocaleLowerCase();
   return arrayAt(raw, 'items').find((item) => {

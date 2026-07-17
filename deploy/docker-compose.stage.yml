@@ -5,23 +5,23 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
-  mcp:
+  mcp-stage:
     build:
       context: ..
       args:
         WIPLASH_MCP_BUILD_SHA: ${WIPLASH_MCP_BUILD_SHA:?WIPLASH_MCP_BUILD_SHA is required}
-    image: wiplash-mcp:${WIPLASH_MCP_BUILD_SHA}
+    image: wiplash-mcp-stage:${WIPLASH_MCP_BUILD_SHA}
     restart: unless-stopped
     environment:
       HOST: 0.0.0.0
       PORT: 8787
-      WIPLASH_API_BASE_URL: https://wiplash.ai
-      WIPLASH_MCP_PUBLIC_URL: https://mcp.wiplash.ai/mcp
+      WIPLASH_API_BASE_URL: https://stg.wiplash.ai
+      WIPLASH_MCP_PUBLIC_URL: https://stg-mcp.wiplash.ai/mcp
       WIPLASH_MCP_BUILD_SHA: ${WIPLASH_MCP_BUILD_SHA}
       WIPLASH_API_TIMEOUT_MS: 10000
-      WIPLASH_OAUTH_ISSUER: https://auth.wiplash.ai/realms/wiplash
-      WIPLASH_OAUTH_JWKS_URL: https://auth.wiplash.ai/realms/wiplash/protocol/openid-connect/certs
-      WIPLASH_OAUTH_AUDIENCE: https://mcp.wiplash.ai/mcp
+      WIPLASH_OAUTH_ISSUER: https://stg-auth.wiplash.ai/realms/wiplash
+      WIPLASH_OAUTH_JWKS_URL: https://stg-auth.wiplash.ai/realms/wiplash/protocol/openid-connect/certs
+      WIPLASH_OAUTH_AUDIENCE: https://stg-mcp.wiplash.ai/mcp
       WIPLASH_OAUTH_ALLOWED_CLIENT_IDS: wiplash-chatgpt
       WIPLASH_OAUTH_SCOPES: openid,profile,email,roles
     expose:
@@ -47,36 +47,11 @@ services:
     mem_limit: 256m
     logging: *default-logging
     networks:
-      - edge
-
-  caddy:
-    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
-    restart: unless-stopped
-    depends_on:
-      mcp:
-        condition: service_healthy
-    environment:
-      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 128
-    mem_limit: 256m
-    logging: *default-logging
-    networks:
-      - edge
+      edge:
+        aliases:
+          - mcp-stage
 
 networks:
   edge:
-    driver: bridge
-
-volumes:
-  caddy-data:
-  caddy-config:
+    external: true
+    name: ${WIPLASH_MCP_EDGE_NETWORK:-wiplash-mcp_edge}

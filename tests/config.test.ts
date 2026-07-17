@@ -9,6 +9,9 @@ describe('loadConfig', () => {
     expect(config.apiBaseUrl.toString()).toBe('https://wiplash.ai/');
     expect(config.publicMcpUrl.toString()).toBe('https://mcp.wiplash.ai/mcp');
     expect(config.allowedHosts).toContain('mcp.wiplash.ai');
+    expect(config.oauthIssuer.toString()).toBe('https://auth.wiplash.ai/realms/wiplash');
+    expect(config.oauthAudience).toBe('https://mcp.wiplash.ai/mcp');
+    expect(config.oauthAllowedClientIds).toEqual(['wiplash-chatgpt']);
   });
 
   it('allows HTTP only for local development', () => {

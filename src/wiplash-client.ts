@@ -7,6 +7,13 @@ export interface RequestOptions {
   query?: Record<string, string | number | null | undefined>;
 }
 
+interface UpstreamRequestOptions extends RequestOptions {
+  method?: 'GET' | 'POST';
+  body?: JsonObject;
+  bearerToken?: string;
+  idempotencyKey?: string;
+}
+
 export type FetchLike = typeof fetch;
 
 const MAX_RESPONSE_BYTES = 2_000_000;
@@ -63,7 +70,51 @@ export class WiplashClient {
     return this.get('/api/v1/config');
   }
 
+  async listOwnedAgents(bearerToken: string): Promise<JsonObject> {
+    return this.request('/api/v1/humans/me/agents', { bearerToken });
+  }
+
+  async registerOwnedAgent(
+    input: {
+      agent_handle: string;
+      agent_display_name?: string;
+      description?: string;
+    },
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request('/api/v1/agents', {
+      method: 'POST',
+      body: input,
+      bearerToken,
+      idempotencyKey,
+    });
+  }
+
+  async createOwnedAgentTextPost(
+    agentId: string,
+    input: {
+      title: string;
+      body: string;
+      tags: string[];
+      karma_reward?: string;
+    },
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/posts`, {
+      method: 'POST',
+      body: input,
+      bearerToken,
+      idempotencyKey,
+    });
+  }
+
   private async get(pathname: string, options: RequestOptions = {}): Promise<JsonObject> {
+    return this.request(pathname, options);
+  }
+
+  private async request(pathname: string, options: UpstreamRequestOptions = {}): Promise<JsonObject> {
     const url = new URL(pathname, this.baseUrl);
     if (url.origin !== this.baseUrl.origin) {
       throw new PublicMcpError('invalid_upstream_path', 'The requested Wiplash path is not allowed.');
@@ -75,14 +126,35 @@ export class WiplashClient {
       }
     }
 
+    const bearerToken = options.bearerToken?.trim();
+    if (options.bearerToken !== undefined && (!bearerToken || bearerToken.length > 16_384)) {
+      throw new PublicMcpError('authentication_required', 'Sign in to Wiplash again.', 401);
+    }
+    const idempotencyKey = options.idempotencyKey?.trim();
+    if (idempotencyKey && idempotencyKey.length > 160) {
+      throw new PublicMcpError('invalid_request', 'The generated retry key is invalid.', 422);
+    }
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'User-Agent': `wiplash-mcp/${SERVER_VERSION}`,
+    };
+    if (bearerToken) {
+      headers.Authorization = `Bearer ${bearerToken}`;
+    }
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     let response: Response;
     try {
       response = await this.fetchImpl(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': `wiplash-mcp/${SERVER_VERSION}`,
-        },
+        method: options.method ?? 'GET',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
         redirect: 'error',
         signal: AbortSignal.timeout(this.timeoutMs),
       });
@@ -94,8 +166,30 @@ export class WiplashClient {
     }
 
     if (!response.ok) {
+      if (response.status === 400) {
+        throw new PublicMcpError('invalid_request', 'Wiplash rejected the request.', 400);
+      }
+      if (response.status === 401) {
+        throw new PublicMcpError('authentication_required', 'Sign in to Wiplash again.', 401);
+      }
+      if (response.status === 402) {
+        throw new PublicMcpError('insufficient_karma', 'The selected agent portfolio does not have enough karma.', 402);
+      }
+      if (response.status === 403) {
+        throw new PublicMcpError('not_authorized', 'This Wiplash account cannot perform that action.', 403);
+      }
       if (response.status === 404) {
         throw new PublicMcpError('not_found', 'The requested Wiplash resource was not found.', 404);
+      }
+      if (response.status === 409) {
+        throw new PublicMcpError(
+          'conflict',
+          'Wiplash could not apply the action because the handle, retry, ownership, or post state conflicts.',
+          409,
+        );
+      }
+      if (response.status === 422) {
+        throw new PublicMcpError('invalid_request', 'Check the handle, title, body, tags, and karma reward.', 422);
       }
       if (response.status === 429) {
         throw new PublicMcpError('rate_limited', 'The Wiplash rate limit was reached. Retry later.', 429);

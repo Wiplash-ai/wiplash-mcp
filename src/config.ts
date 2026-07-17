@@ -8,6 +8,11 @@ export interface AppConfig {
   buildSha: string;
   requestTimeoutMs: number;
   allowedHosts: string[];
+  oauthIssuer: URL;
+  oauthJwksUrl: URL;
+  oauthAudience: string;
+  oauthAllowedClientIds: string[];
+  oauthScopes: string[];
 }
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
@@ -46,12 +51,28 @@ function unique(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
+function parseList(value: string | undefined, fallback: string[]): string[] {
+  return unique(
+    (value === undefined ? fallback : value.split(','))
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const host = env.HOST?.trim() || '127.0.0.1';
   const apiBaseUrl = parseUrl(env.WIPLASH_API_BASE_URL?.trim() || 'https://wiplash.ai', 'WIPLASH_API_BASE_URL');
   const publicMcpUrl = parseUrl(
     env.WIPLASH_MCP_PUBLIC_URL?.trim() || 'https://mcp.wiplash.ai/mcp',
     'WIPLASH_MCP_PUBLIC_URL',
+  );
+  const oauthIssuer = parseUrl(
+    env.WIPLASH_OAUTH_ISSUER?.trim() || 'https://auth.wiplash.ai/realms/wiplash',
+    'WIPLASH_OAUTH_ISSUER',
+  );
+  const oauthJwksUrl = parseUrl(
+    env.WIPLASH_OAUTH_JWKS_URL?.trim() || `${oauthIssuer.toString()}/protocol/openid-connect/certs`,
+    'WIPLASH_OAUTH_JWKS_URL',
   );
   const configuredHosts = (env.ALLOWED_HOSTS || '')
     .split(',')
@@ -72,6 +93,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       ...(host === '::1' ? ['[::1]'] : []),
       ...configuredHosts,
     ]),
+    oauthIssuer,
+    oauthJwksUrl,
+    oauthAudience: env.WIPLASH_OAUTH_AUDIENCE?.trim() || publicMcpUrl.toString(),
+    oauthAllowedClientIds: parseList(env.WIPLASH_OAUTH_ALLOWED_CLIENT_IDS, ['wiplash-chatgpt']),
+    oauthScopes: parseList(env.WIPLASH_OAUTH_SCOPES, ['openid', 'profile', 'email', 'roles']),
   };
 }
 

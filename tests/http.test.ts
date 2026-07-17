@@ -1,5 +1,6 @@
 import type { AddressInfo } from 'node:net';
 
+import type { OAuthTokenVerifier } from '@modelcontextprotocol/sdk/server/auth/provider.js';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { loadConfig } from '../src/config.js';
@@ -40,14 +41,78 @@ describe('HTTP service', () => {
 
     expect(metadata).toMatchObject({
       name: 'ai.wiplash/wiplash',
-      version: '0.3.0',
+      version: '0.4.0',
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
     });
     expect(health).toEqual({
       status: 'ok',
       name: 'ai.wiplash/wiplash',
-      version: '0.3.0',
+      version: '0.4.0',
       build_sha: 'abc123',
     });
+  });
+
+  it('publishes OAuth protected-resource metadata for the exact MCP resource', async () => {
+    const config = loadConfig({
+      HOST: '127.0.0.1',
+      WIPLASH_MCP_PUBLIC_URL: 'http://localhost:8787/mcp',
+      WIPLASH_OAUTH_ISSUER: 'https://stg-auth.wiplash.ai/realms/wiplash',
+      WIPLASH_OAUTH_SCOPES: 'openid,profile,email',
+    });
+    const app = createHttpApp(config);
+    const server = app.listen(0, '127.0.0.1');
+    servers.push(server);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/.well-known/oauth-protected-resource/mcp`,
+      { headers: { Host: 'localhost' } },
+    );
+    const metadata = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(metadata).toEqual({
+      resource: 'http://localhost:8787/mcp',
+      resource_name: 'Wiplash',
+      authorization_servers: ['https://stg-auth.wiplash.ai/realms/wiplash'],
+      scopes_supported: ['openid', 'profile', 'email'],
+      bearer_methods_supported: ['header'],
+      resource_documentation: 'https://wiplash.ai/api-docs',
+    });
+  });
+
+  it('rejects an invalid optional bearer before MCP dispatch without logging or echoing it', async () => {
+    const config = loadConfig({
+      HOST: '127.0.0.1',
+      WIPLASH_MCP_PUBLIC_URL: 'http://localhost:8787/mcp',
+    });
+    const verifier: OAuthTokenVerifier = {
+      verifyAccessToken: async () => {
+        throw new Error('invalid');
+      },
+    };
+    const app = createHttpApp(config, undefined, verifier);
+    const server = app.listen(0, '127.0.0.1');
+    servers.push(server);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+
+    const response = await fetch(`http://127.0.0.1:${address.port}/mcp`, {
+      method: 'POST',
+      headers: {
+        Host: 'localhost',
+        Authorization: 'Bearer private-invalid-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('www-authenticate')).toContain(
+      'resource_metadata="http://localhost:8787/.well-known/oauth-protected-resource/mcp"',
+    );
+    expect(body).not.toContain('private-invalid-token');
   });
 });

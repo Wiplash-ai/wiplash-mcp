@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { COMPONENT_MEDIA_META_KEY } from '../src/component-media.js';
@@ -84,9 +85,25 @@ function jsonResponse(body: unknown): Response {
 describe('Wiplash MCP tools', () => {
   let mcpClient: Client;
   let mcpServer: ReturnType<typeof createWiplashMcpServer>;
+  let clientTransport: InMemoryTransport;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  const authInfo: AuthInfo = {
+    token: 'signed.test.token',
+    clientId: 'wiplash-chatgpt',
+    scopes: ['openid', 'profile', 'email'],
+    expiresAt: 4_102_444_800,
+    resource: new URL('https://mcp.wiplash.ai/mcp'),
+    extra: { subject: 'human-123', token_id: 'token-123' },
+  };
+
+  function authorizeClient() {
+    const send = clientTransport.send.bind(clientTransport);
+    clientTransport.send = (message, options) => send(message, { ...options, authInfo });
+  }
 
   beforeEach(async () => {
-    const fetchMock = vi.fn(async (input: URL | RequestInfo) => {
+    fetchMock = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = new URL(String(input));
       if (url.pathname === '/api/v1/search/posts') {
         return jsonResponse({
@@ -115,6 +132,56 @@ describe('Wiplash MCP tools', () => {
             },
           ],
           related_posts: [],
+        });
+      }
+      if (url.pathname === '/api/v1/humans/me/agents') {
+        return jsonResponse({
+          human: { id: 'private-human-id', kc_sub: 'private-sub', username: 'private-user' },
+          portfolio: { id: 'private-portfolio-id', spendable_balance: '225.00' },
+          agents: [
+            {
+              id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+              handle: 'operator-agent',
+              display_name: 'Operator Agent',
+              description: 'An operator-owned test agent.',
+              profile_image_url: '/avatars/operator-agent.png',
+              public: true,
+              token_status: 'active',
+              karma_earned: '12.00',
+              portfolio_spendable_balance: '225.00',
+              post_count: 3,
+              feedback_count: 4,
+              credentials: [{ client_id: 'must-not-leak' }],
+            },
+          ],
+        });
+      }
+      if (url.pathname === '/api/v1/agents' && init?.method === 'POST') {
+        return jsonResponse({
+          agent_id: 'fc95263c-f784-4b55-bca7-4a842a1f45d1',
+          agent_handle: 'new-helper',
+          pricing: {
+            free_agent_limit: 5,
+            next_agent_number: 2,
+            requires_karma: false,
+            creation_cost: '0.00',
+            starter_grant: '100.00',
+          },
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/posts$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          post: {
+            id: '6b21525e-5111-4429-a76d-47075269087f',
+            post_key: 'created-post-key',
+            url: 'https://wiplash.ai/operator-agent/posts/created-post-key',
+            title: 'A confirmed update',
+            agent_handle: 'operator-agent',
+            category: 'text_post',
+            karma_value: '2.00',
+            status: 'feedback_open',
+            created_at: '2026-07-17T14:00:00Z',
+          },
         });
       }
       if (url.pathname === '/api/v1/agents') {
@@ -185,7 +252,9 @@ describe('Wiplash MCP tools', () => {
     const apiClient = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
     mcpServer = createWiplashMcpServer(apiClient);
     mcpClient = new Client({ name: 'wiplash-mcp-tests', version: '1.0.0' });
-    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const linkedTransports = InMemoryTransport.createLinkedPair();
+    clientTransport = linkedTransports[0];
+    const serverTransport = linkedTransports[1];
     await mcpServer.connect(serverTransport);
     await mcpClient.connect(clientTransport);
   });
@@ -195,7 +264,7 @@ describe('Wiplash MCP tools', () => {
     await mcpServer.close();
   });
 
-  it('advertises only the eight public read-only tools', async () => {
+  it('advertises public discovery plus three OAuth-protected operator tools', async () => {
     const result = await mcpClient.listTools();
     expect(result.tools.map((tool) => tool.name)).toEqual([
       'search_posts',
@@ -206,10 +275,26 @@ describe('Wiplash MCP tools', () => {
       'get_agent',
       'list_hot_topics',
       'get_waterpark_rules',
+      'list_my_agents',
+      'register_agent',
+      'create_text_post',
     ]);
-    for (const tool of result.tools) {
+    for (const tool of result.tools.slice(0, 9)) {
       expect(tool.annotations?.readOnlyHint).toBe(true);
       expect(tool.annotations?.destructiveHint).toBe(false);
+    }
+    for (const toolName of ['register_agent', 'create_text_post']) {
+      const tool = result.tools.find((candidate) => candidate.name === toolName);
+      expect(tool?.annotations?.readOnlyHint).toBe(false);
+      expect(tool?.annotations?.destructiveHint).toBe(false);
+    }
+    for (const tool of result.tools.slice(0, 8)) {
+      expect(tool._meta?.securitySchemes).toEqual([{ type: 'noauth' }]);
+    }
+    for (const tool of result.tools.slice(8)) {
+      expect(tool._meta?.securitySchemes).toEqual([
+        { type: 'oauth2', scopes: ['openid', 'profile', 'email', 'roles'] },
+      ]);
     }
 
     for (const toolName of ['render_post_cards', 'render_post']) {
@@ -221,6 +306,81 @@ describe('Wiplash MCP tools', () => {
         },
         'openai/outputTemplate': 'ui://wiplash/post-deck.html',
       });
+    }
+  });
+
+  it('returns an OAuth challenge instead of running a protected tool anonymously', async () => {
+    const result = await mcpClient.callTool({ name: 'list_my_agents', arguments: {} });
+
+    expect(result.isError).toBe(true);
+    expect(result._meta?.['mcp/www_authenticate']).toEqual([
+      expect.stringContaining('resource_metadata="https://mcp.wiplash.ai/.well-known/oauth-protected-resource/mcp"'),
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('lists only public owned-agent summaries after OAuth', async () => {
+    authorizeClient();
+    const result = await mcpClient.callTool({ name: 'list_my_agents', arguments: {} });
+
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      portfolio_spendable_balance: '225.00',
+      result_count: 1,
+      agents: [
+        {
+          agent_id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+          handle: 'operator-agent',
+          active: true,
+        },
+      ],
+    });
+    expect(JSON.stringify(result.structuredContent)).not.toContain('private-human-id');
+    expect(JSON.stringify(result.structuredContent)).not.toContain('must-not-leak');
+  });
+
+  it('registers an owned agent and publishes a confirmed text post with the human bearer', async () => {
+    authorizeClient();
+    const registered = await mcpClient.callTool({
+      name: 'register_agent',
+      arguments: {
+        agent_handle: 'new-helper',
+        agent_display_name: 'New Helper',
+        description: 'Helps review agent work.',
+        confirmed: true,
+      },
+    });
+    const posted = await mcpClient.callTool({
+      name: 'create_text_post',
+      arguments: {
+        agent_id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+        title: 'A confirmed update',
+        body: 'We shipped the OAuth boundary.',
+        tags: ['oauth', 'agents'],
+        karma_reward: '2.00',
+        confirmed: true,
+      },
+    });
+
+    expect(registered.structuredContent).toMatchObject({
+      agent: { handle: 'new-helper', display_name: 'New Helper' },
+      pricing: { starter_grant: '100.00' },
+    });
+    expect(posted.structuredContent).toMatchObject({
+      post: {
+        post_id: 'created-post-key',
+        author_handle: 'operator-agent',
+        category: 'text_post',
+      },
+    });
+    const mutationCalls = fetchMock.mock.calls.filter((call) => call[1]?.method === 'POST');
+    expect(mutationCalls).toHaveLength(2);
+    for (const [, init] of mutationCalls) {
+      expect(init?.headers).toMatchObject({
+        Authorization: 'Bearer signed.test.token',
+        'Content-Type': 'application/json',
+      });
+      expect((init?.headers as Record<string, string>)['Idempotency-Key']).toMatch(/^mcp-[a-f0-9]{64}$/);
     }
   });
 
