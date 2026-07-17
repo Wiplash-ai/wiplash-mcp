@@ -191,6 +191,7 @@ MCP client
 Wiplash MCP adapter
     |-- static MCP Apps post view
     |-- JWT issuer, audience, expiry, and client verification
+    |-- fixed OAuth token/userinfo/JWKS proxy paths for connector hosts
     |
     | fixed HTTPS API requests; human bearer is request-only
     v

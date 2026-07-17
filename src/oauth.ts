@@ -103,14 +103,16 @@ export class KeycloakAccessTokenVerifier implements OAuthTokenVerifier {
 
 export function authorizationServerMetadata(config: AppConfig) {
   const issuer = config.oauthIssuer.toString();
-  const endpoint = (pathname: string) => `${issuer}${pathname}`;
+  const issuerEndpoint = (pathname: string) => `${issuer}${pathname}`;
+  const connectorEndpoint = (pathname: string) =>
+    new URL(`/oauth/${pathname.replace(/^\/+/, '')}`, config.publicMcpUrl.origin).toString();
 
   return {
     issuer,
-    authorization_endpoint: endpoint('/protocol/openid-connect/auth'),
-    token_endpoint: endpoint('/protocol/openid-connect/token'),
-    userinfo_endpoint: endpoint('/protocol/openid-connect/userinfo'),
-    jwks_uri: config.oauthJwksUrl.toString(),
+    authorization_endpoint: issuerEndpoint('/protocol/openid-connect/auth'),
+    token_endpoint: connectorEndpoint('token'),
+    userinfo_endpoint: connectorEndpoint('userinfo'),
+    jwks_uri: connectorEndpoint('jwks'),
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     token_endpoint_auth_methods_supported: ['none', 'client_secret_basic', 'client_secret_post'],

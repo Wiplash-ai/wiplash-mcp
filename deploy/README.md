@@ -14,10 +14,10 @@ Point the `mcp.wiplash.ai` A record to the production node before expecting Cadd
 
 ## OAuth Prerequisites
 
-- Configure a confidential authorization-code client named `wiplash-chatgpt` in the Wiplash realm with PKCE `S256` and the exact callback URI supplied by the MCP host.
+- Configure an authorization-code client named `wiplash-chatgpt` in the Wiplash realm with PKCE `S256` and the exact callback URI supplied by the MCP host. Public clients use token endpoint auth method `none`; confidential clients use their configured client-secret method.
 - Add both `wiplash-api` and the exact `https://mcp.wiplash.ai/mcp` resource audience to its access tokens.
 - Add `wiplash-chatgpt` to the social-network backend's `KEYCLOAK_HUMAN_CLIENT_IDS` allowlist.
-- Enter the OAuth client secret only in the MCP host's app configuration. The Wiplash MCP process does not need, store, or receive that secret.
+- When using a confidential client, enter its secret only in the MCP host's app configuration. The Wiplash MCP process does not need, store, or receive that secret.
 
 ## Stage Connector
 
@@ -46,8 +46,10 @@ continue to go directly to Keycloak.
 ChatGPT developer mode also probes authorization-server metadata aliases on
 the MCP resource origin. The MCP service answers those exact aliases with a
 minimal document that keeps Keycloak as the issuer and advertises only the
-authorization-code flow with PKCE `S256`. Do not replace the issuer or token
-endpoints with MCP-origin URLs.
+authorization-code flow with PKCE `S256`. Caddy exposes fixed MCP-origin token,
+userinfo, and JWKS paths that proxy only to the matching Keycloak realm. This
+keeps server-side connector exchanges on the already verified MCP origin
+without turning the MCP service into a general-purpose proxy.
 
 ## Verify
 

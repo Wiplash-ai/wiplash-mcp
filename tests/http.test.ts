@@ -115,7 +115,9 @@ describe('HTTP service', () => {
         issuer: 'https://stg-auth.wiplash.ai/realms/wiplash',
         authorization_endpoint:
           'https://stg-auth.wiplash.ai/realms/wiplash/protocol/openid-connect/auth',
-        token_endpoint: 'https://stg-auth.wiplash.ai/realms/wiplash/protocol/openid-connect/token',
+        token_endpoint: 'http://localhost:8787/oauth/token',
+        userinfo_endpoint: 'http://localhost:8787/oauth/userinfo',
+        jwks_uri: 'http://localhost:8787/oauth/jwks',
         code_challenge_methods_supported: ['S256'],
         scopes_supported: ['openid', 'profile', 'email', 'roles'],
       });

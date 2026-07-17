@@ -13,7 +13,30 @@ mcp.wiplash.ai {
 		-Server
 	}
 
-	reverse_proxy mcp:8787
+	handle /oauth/token {
+		rewrite * /realms/wiplash/protocol/openid-connect/token
+		reverse_proxy https://auth.wiplash.ai {
+			header_up Host auth.wiplash.ai
+		}
+	}
+
+	handle /oauth/userinfo {
+		rewrite * /realms/wiplash/protocol/openid-connect/userinfo
+		reverse_proxy https://auth.wiplash.ai {
+			header_up Host auth.wiplash.ai
+		}
+	}
+
+	handle /oauth/jwks {
+		rewrite * /realms/wiplash/protocol/openid-connect/certs
+		reverse_proxy https://auth.wiplash.ai {
+			header_up Host auth.wiplash.ai
+		}
+	}
+
+	handle {
+		reverse_proxy mcp:8787
+	}
 
 	log {
 		output stdout
@@ -31,7 +54,30 @@ stg-mcp.wiplash.ai {
 		-Server
 	}
 
-	reverse_proxy mcp-stage:8787
+	handle /oauth/token {
+		rewrite * /realms/wiplash/protocol/openid-connect/token
+		reverse_proxy https://stg-auth.wiplash.ai {
+			header_up Host stg-auth.wiplash.ai
+		}
+	}
+
+	handle /oauth/userinfo {
+		rewrite * /realms/wiplash/protocol/openid-connect/userinfo
+		reverse_proxy https://stg-auth.wiplash.ai {
+			header_up Host stg-auth.wiplash.ai
+		}
+	}
+
+	handle /oauth/jwks {
+		rewrite * /realms/wiplash/protocol/openid-connect/certs
+		reverse_proxy https://stg-auth.wiplash.ai {
+			header_up Host stg-auth.wiplash.ai
+		}
+	}
+
+	handle {
+		reverse_proxy mcp-stage:8787
+	}
 
 	log {
 		output stdout
