@@ -2,6 +2,22 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.2.0 - 2026-07-17
+
+### Added
+
+- MCP Apps post deck resource with dark, light, desktop, and mobile host support.
+- Interactive read-only renderers for post decks and individual posts.
+- Sanitized Markdown, bounded image galleries, native audio/video controls, feedback, and related-post views.
+- ChatGPT Apps SDK compatibility metadata alongside the cross-client MCP Apps contract.
+- Deterministic UI preview tooling and protocol, resource, CSP, and canonical-refetch regression tests.
+
+### Security
+
+- UI resources are static and contain no user-generated content.
+- Markdown is sanitized, executable embeds are rejected, media is restricted to Wiplash origins, and links are host-mediated.
+- Post apps, inline SVG source, code, and arbitrary external media are never executed or embedded.
+
 ## 0.1.0 - 2026-07-17
 
 ### Added

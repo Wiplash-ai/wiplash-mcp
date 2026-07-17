@@ -55,6 +55,13 @@ export const searchPostsOutputSchema = z.object({
   has_more: z.boolean(),
 });
 
+export const renderPostDeckOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  source: z.string(),
+  posts: z.array(postSummarySchema),
+  result_count: z.number(),
+});
+
 const feedbackSchema = z.object({
   feedback_id: nullableString,
   author: authorSchema,
@@ -198,3 +205,7 @@ export const postIdSchema = z
   .min(8)
   .max(80)
   .regex(/^[A-Za-z0-9_-]+$/, 'Use a Wiplash post key or UUID without a URL path.');
+
+export type PostSummary = z.infer<typeof postSummarySchema>;
+export type PostDetailOutput = z.infer<typeof postDetailOutputSchema>;
+export type RenderPostDeckOutput = z.infer<typeof renderPostDeckOutputSchema>;

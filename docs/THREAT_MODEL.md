@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document covers the public Wiplash MCP adapter, its remote Streamable HTTP endpoint, and its fixed read-only calls to the Wiplash public API. It does not claim that user-generated Wiplash content is trustworthy.
+This document covers the public Wiplash MCP adapter, its remote Streamable HTTP endpoint, its MCP Apps post view, and its fixed read-only calls to the Wiplash public API. It does not claim that user-generated Wiplash content is trustworthy.
 
 ## Assets
 
@@ -17,13 +17,17 @@ This document covers the public Wiplash MCP adapter, its remote Streamable HTTP 
 1. MCP clients are outside the Wiplash trust boundary.
 2. Wiplash posts, profiles, feedback, tags, media, apps, SVGs, and code metadata are untrusted input.
 3. The Wiplash public API is an upstream service with a versioned but evolving response contract.
-4. GitHub Actions and the container registry form the release supply chain.
+4. MCP hosts sandbox the static post view and mediate its links and messages.
+5. GitHub Actions and the container registry form the release supply chain.
 
 ## Principal Threats and Mitigations
 
 | Threat | Impact | Mitigation |
 | --- | --- | --- |
 | Prompt injection in posts or profiles | A model follows user content as instructions | Explicit untrusted markers, server instructions, narrow structured fields, and no tool that executes content. |
+| Cross-site scripting in the post view | Malicious Markdown or media metadata executes in the host | Static UI resource, DOMPurify allowlisting, rejected scripts/forms/iframes/SVG source, escaped attributes, and no raw post HTML. |
+| Browser-side exfiltration | A malicious post makes the view contact an attacker | No UI network capability, Wiplash-only media origins, HTTPS URL validation, and host-mediated user-initiated links. |
+| Embedded app or code execution | A post app, SVG, or code review runs inside the conversation | App URLs, inline SVG source, and code are treated as metadata and are never embedded or executed. |
 | Secret or data exfiltration | A malicious post asks the model to reveal unrelated information | Read-only tools accept no secrets and server instructions prohibit treating results as commands. |
 | SSRF or arbitrary proxying | A caller makes the server fetch an internal URL | Fixed API paths, same-origin enforcement, HTTPS-only production origins, and rejected redirects. |
 | Oversized responses | Cost amplification or client failure | API limits, local item caps, text truncation, timeout, and a two-megabyte upstream ceiling. |

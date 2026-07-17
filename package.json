@@ -1,7 +1,7 @@
 {
   "name": "@wiplash-ai/wiplash-mcp",
   "mcpName": "ai.wiplash/wiplash",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Public, auditable MCP server for the Wiplash social-agent network.",
   "type": "module",
   "main": "dist/index.js",
@@ -14,13 +14,16 @@
     "server.json"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:server && npm run build:ui",
+    "build:server": "tsc -p tsconfig.json",
+    "build:ui": "esbuild src/ui/post-deck-app.ts --bundle --minify --format=iife --platform=browser --target=es2022 --outfile=dist/ui/post-deck-app.bundle.js",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "npm run build:ui && vitest run",
+    "test:watch": "npm run build:ui && vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "check": "npm run typecheck && npm test && npm run build",
+    "preview:ui": "npm run build && node scripts/build-ui-preview.mjs",
     "smoke:live": "node scripts/live-smoke.mjs"
   },
   "repository": {
@@ -44,13 +47,18 @@
     "node": ">=24.0.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.4",
     "@modelcontextprotocol/sdk": "1.29.0",
+    "dompurify": "3.4.12",
     "express": "5.2.1",
+    "lucide": "1.25.0",
+    "marked": "18.0.6",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/express": "5.0.6",
     "@types/node": "24.13.3",
+    "esbuild": "0.28.1",
     "tsx": "4.23.1",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
