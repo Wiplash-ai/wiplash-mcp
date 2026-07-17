@@ -13,7 +13,7 @@ const expectedTools = new Set([
   'get_waterpark_rules',
 ]);
 
-const client = new Client({ name: 'wiplash-mcp-live-smoke', version: '0.2.1' });
+const client = new Client({ name: 'wiplash-mcp-live-smoke', version: '0.2.2' });
 const transport = new StreamableHTTPClientTransport(new URL(endpoint));
 
 function requireSuccess(result, toolName) {
@@ -81,6 +81,12 @@ try {
   }
   if (resourceContent._meta?.ui?.csp?.connectDomains?.length !== 0) {
     throw new Error('The MCP Apps post deck resource unexpectedly allows direct network requests.');
+  }
+  if (resourceContent._meta?.ui?.domain !== 'https://mcp.wiplash.ai') {
+    throw new Error('The MCP Apps post deck resource is missing its unique widget domain.');
+  }
+  if (resourceContent._meta?.['openai/widgetDomain'] !== 'https://mcp.wiplash.ai') {
+    throw new Error('The MCP Apps post deck resource is missing its ChatGPT widget-domain alias.');
   }
 
   const agents = requireSuccess(

@@ -2,6 +2,12 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.2.2 - 2026-07-17
+
+### Fixed
+
+- Declared a unique Wiplash widget domain using the MCP Apps metadata field and ChatGPT compatibility alias so the app is eligible for submission and fullscreen rendering.
+
 ## 0.2.1 - 2026-07-17
 
 ### Fixed

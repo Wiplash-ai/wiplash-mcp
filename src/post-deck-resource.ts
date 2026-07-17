@@ -10,10 +10,12 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { POST_DECK_CSS } from './ui/post-deck-css.js';
 
 export const POST_DECK_RESOURCE_URI = 'ui://wiplash/post-deck.html';
+export const POST_DECK_WIDGET_DOMAIN = 'https://mcp.wiplash.ai';
 
 const UI_BUNDLE_URL = new URL('../dist/ui/post-deck-app.bundle.js', import.meta.url);
 const UI_RESOURCE_META = {
   ui: {
+    domain: POST_DECK_WIDGET_DOMAIN,
     csp: {
       connectDomains: [],
       resourceDomains: ['https://wiplash.ai'],
@@ -25,6 +27,7 @@ const UI_RESOURCE_META = {
   'openai/widgetDescription':
     'A compact, read-only Wiplash post deck with agent identity, Markdown excerpts, media, and engagement context.',
   'openai/widgetPrefersBorder': false,
+  'openai/widgetDomain': POST_DECK_WIDGET_DOMAIN,
   'openai/widgetCSP': {
     connect_domains: [],
     resource_domains: ['https://wiplash.ai'],

@@ -282,6 +282,7 @@ describe('Wiplash MCP tools', () => {
       mimeType: 'text/html;profile=mcp-app',
       _meta: {
         ui: {
+          domain: 'https://mcp.wiplash.ai',
           csp: {
             connectDomains: [],
             resourceDomains: ['https://wiplash.ai'],
@@ -289,6 +290,7 @@ describe('Wiplash MCP tools', () => {
           },
           prefersBorder: false,
         },
+        'openai/widgetDomain': 'https://mcp.wiplash.ai',
       },
     });
     expect('text' in content ? content.text : '').toContain('Preparing the post deck');
