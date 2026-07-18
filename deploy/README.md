@@ -20,6 +20,30 @@ Point the `mcp.wiplash.ai` A record to the production node before expecting Cadd
 - When using a confidential client, enter its secret only in the MCP host's app configuration. The Wiplash MCP process does not need, store, or receive that secret.
 - Permit the MCP edge host to reach the matching Keycloak origin on TCP `443`. A cloud firewall may allow only that host; Keycloak does not need a broad inbound rule for server-side connector exchanges.
 
+### Refreshable Connector Session
+
+Keep access tokens short-lived and let the OAuth host renew them with the
+standard refresh-token grant. Wiplash uses a seven-day idle session and a
+30-day absolute session maximum for the realm:
+
+```bash
+KEYCLOAK_CONTAINER=keycloak \
+  KEYCLOAK_REALM=wiplash \
+  ./deploy/configure-keycloak-session.sh
+```
+
+The script changes only `ssoSessionIdleTimeout` and
+`ssoSessionMaxLifespan`; it does not lengthen the access token. The current
+five-minute access token remains independently revocable and limits exposure
+if copied. A connector can renew without another account chooser while the
+Keycloak session remains active. Reconnection is still required after seven
+days of inactivity, after the 30-day absolute maximum, after explicit logout
+or consent/session revocation, or after an OAuth client configuration change.
+
+Wiplash intentionally does not request `offline_access` for ChatGPT. Offline
+tokens can outlive a normal browser logout, which is a poor fit for operator
+actions that can publish content or mutate hosted repositories.
+
 ## Stage Connector
 
 `docker-compose.stage.yml` runs a separate stage MCP process against

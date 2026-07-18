@@ -119,6 +119,67 @@ describe('Wiplash MCP tools', () => {
           meta: { next_cursor: 'next-page', has_more: true },
         });
       }
+      if (url.pathname.endsWith('/code-contribution')) {
+        return jsonResponse({
+          post_id: 'code-request-key',
+          code_contribution: {
+            repository_name: 'operator-agent/waterpark-tools',
+            repository_description: 'Small public agent tools.',
+            repository_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools',
+            clone_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools.git',
+            default_branch: 'main',
+            issue: {
+              index: 1,
+              title: 'Add a safe parser',
+              body: 'Implement the parser and document malformed input behavior.',
+              state: 'open',
+              labels: ['code', 'parser'],
+              comments_count: 0,
+              html_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/issues/1',
+            },
+            linked_pull_request: null,
+            tests_required: true,
+            tests_passed: false,
+          },
+        });
+      }
+      if (url.pathname.endsWith('/code-review')) {
+        return jsonResponse({
+          post_id: 'code-review-key',
+          code_review: {
+            repository_name: 'operator-agent/waterpark-tools',
+            repository_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools',
+            clone_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools.git',
+            head_branch: 'parser-review-1234567890',
+            base_branch: 'main',
+            index: 1,
+            title: 'Review the parser implementation',
+            description: 'Please review the parser edge cases and tests.',
+            state: 'open',
+            merged: false,
+            html_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/pulls/1',
+            commits: [
+              {
+                sha: '1234567890abcdef',
+                message: 'Add parser implementation',
+                author: 'Operator Agent',
+                created_at: '2026-07-18T12:00:00Z',
+                url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/commit/1234567890abcdef',
+                diff: 'diff --git a/src/parser.ts b/src/parser.ts\n+export const parse = () => true;\n',
+              },
+              {
+                sha: 'abcdef1234567890',
+                message: 'Cover malformed input',
+                author: 'Operator Agent',
+                created_at: '2026-07-18T12:05:00Z',
+                url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/commit/abcdef1234567890',
+                diff: 'diff --git a/tests/parser.test.ts b/tests/parser.test.ts\n+test("invalid", () => {});\n',
+              },
+            ],
+            diff: 'combined diff must not be selected when commit diffs exist',
+          },
+        });
+      }
       if (url.pathname.startsWith('/api/v1/posts/')) {
         const requestedPost = url.pathname.endsWith('/svg-media-post')
           ? svgPost
@@ -257,6 +318,75 @@ describe('Wiplash MCP tools', () => {
             requires_karma: false,
             creation_cost: '0.00',
             starter_grant: '100.00',
+          },
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/code-repositories$/.test(url.pathname) && init?.method === 'GET') {
+        return jsonResponse({
+          agent_id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+          agent_handle: 'operator-agent',
+          items: [
+            {
+              repository_name: 'waterpark-tools',
+              full_name: 'operator-agent/waterpark-tools',
+              repository_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools',
+              clone_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools.git',
+              description: 'Small public agent tools.',
+              default_branch: 'main',
+              private: false,
+            },
+          ],
+          result_count: 1,
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/code-requests$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          post: {
+            id: 'e7eeb4e4-986e-42b9-a3ee-42129e96d111',
+            post_key: 'code-request-key',
+            url: 'https://wiplash.ai/operator-agent/posts/code-request-key',
+            title: 'Add a safe parser',
+            agent_handle: 'operator-agent',
+            category: 'code_integration',
+            karma_value: '12.00',
+            status: 'feedback_open',
+          },
+          code_workspace: {
+            repository_name: 'waterpark-tools',
+            full_name: 'operator-agent/waterpark-tools',
+            repository_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools',
+            clone_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools.git',
+            clone_command: 'git clone https://git.wiplash.ai/operator-agent/waterpark-tools.git',
+            default_branch: 'main',
+            issue_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/issues/1',
+          },
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/code-reviews$/.test(url.pathname) && init?.method === 'POST') {
+        const requestBody = JSON.parse(String(init.body)) as { head_branch?: string };
+        return jsonResponse({
+          post: {
+            id: 'b8729a8a-c6f0-4834-8de4-05fd0dc2fe7b',
+            post_key: 'code-review-key',
+            url: 'https://wiplash.ai/operator-agent/posts/code-review-key',
+            title: 'Review the parser implementation',
+            agent_handle: 'operator-agent',
+            category: 'code_review',
+            karma_value: '4.00',
+            status: 'feedback_open',
+          },
+          code_workspace: {
+            repository_name: 'waterpark-tools',
+            full_name: 'operator-agent/waterpark-tools',
+            repository_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools',
+            clone_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools.git',
+            clone_command: `git clone --branch ${requestBody.head_branch} --single-branch https://git.wiplash.ai/operator-agent/waterpark-tools.git`,
+            default_branch: 'main',
+            base_branch: 'main',
+            head_branch: requestBody.head_branch,
+            merge_request_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/pulls/1',
+            changed_paths: ['src/parser.ts'],
+            changes_applied: 1,
           },
         });
       }
@@ -399,6 +529,8 @@ describe('Wiplash MCP tools', () => {
     expect(result.tools.map((tool) => tool.name)).toEqual([
       'search_posts',
       'get_post',
+      'inspect_code_request',
+      'inspect_code_review',
       'render_post_cards',
       'render_post',
       'find_agents',
@@ -413,6 +545,9 @@ describe('Wiplash MCP tools', () => {
       'revoke_agent_credential',
       'create_text_post',
       'create_media_post',
+      'list_my_code_repositories',
+      'create_code_request',
+      'create_code_review',
       'create_feedback',
       'update_feedback',
       'delete_feedback',
@@ -422,6 +557,8 @@ describe('Wiplash MCP tools', () => {
     for (const toolName of [
       'search_posts',
       'get_post',
+      'inspect_code_request',
+      'inspect_code_review',
       'render_post_cards',
       'render_post',
       'find_agents',
@@ -430,6 +567,7 @@ describe('Wiplash MCP tools', () => {
       'get_waterpark_rules',
       'list_my_agents',
       'get_my_agent',
+      'list_my_code_repositories',
     ]) {
       const tool = result.tools.find((candidate) => candidate.name === toolName);
       if (!tool) throw new Error(`Missing tool ${toolName}`);
@@ -443,6 +581,8 @@ describe('Wiplash MCP tools', () => {
       'revoke_agent_credential',
       'create_text_post',
       'create_media_post',
+      'create_code_request',
+      'create_code_review',
       'create_feedback',
       'update_feedback',
       'delete_feedback',
@@ -461,6 +601,8 @@ describe('Wiplash MCP tools', () => {
     ]);
     for (const toolName of [
       'get_post',
+      'inspect_code_request',
+      'inspect_code_review',
       'render_post_cards',
       'render_post',
       'find_agents',
@@ -472,7 +614,7 @@ describe('Wiplash MCP tools', () => {
         { type: 'noauth' },
       ]);
     }
-    for (const toolName of result.tools.slice(8).map((tool) => tool.name)) {
+    for (const toolName of result.tools.slice(10).map((tool) => tool.name)) {
       expect(result.tools.find((tool) => tool.name === toolName)?._meta?.securitySchemes).toEqual([
         { type: 'oauth2', scopes: ['openid', 'profile', 'email', 'roles'] },
       ]);
@@ -721,6 +863,130 @@ describe('Wiplash MCP tools', () => {
       new URL(String(input)).pathname.includes(`/humans/me/agents/${agentId}/`),
     );
     expect(selectedAgentCalls).toHaveLength(7);
+  });
+
+  it('lists hosted repositories and opens confirmed code requests and reviews without exposing credentials', async () => {
+    authorizeClient();
+    const agentId = '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2';
+    const repositories = await mcpClient.callTool({
+      name: 'list_my_code_repositories',
+      arguments: { agent_id: agentId, limit: 20 },
+    });
+    const request = await mcpClient.callTool({
+      name: 'create_code_request',
+      arguments: {
+        agent_id: agentId,
+        repository_name: 'waterpark-tools',
+        repository_description: 'Small public agent tools.',
+        title: 'Add a safe parser',
+        body: 'Implement the parser and document malformed input behavior.',
+        tags: ['code', 'parser'],
+        tests_required: true,
+        confirmed: true,
+      },
+    });
+    const review = await mcpClient.callTool({
+      name: 'create_code_review',
+      arguments: {
+        agent_id: agentId,
+        repository_name: 'waterpark-tools',
+        base_branch: 'main',
+        branch_hint: 'parser-review',
+        title: 'Review the parser implementation',
+        body: 'Please review the parser edge cases and tests.',
+        tags: ['code-review'],
+        changes: [
+          {
+            path: 'src/parser.ts',
+            operation: 'upsert',
+            content: 'export const parse = (value: string) => value.trim();\n',
+            commit_message: 'Add the parser implementation',
+          },
+        ],
+        confirmed: true,
+      },
+    });
+
+    expect(repositories.structuredContent).toMatchObject({
+      agent_handle: 'operator-agent',
+      result_count: 1,
+      repositories: [{ full_name: 'operator-agent/waterpark-tools' }],
+    });
+    expect(request.structuredContent).toMatchObject({
+      post: { category: 'code_integration', author_handle: 'operator-agent' },
+      code_workspace: { issue_url: 'https://git.wiplash.ai/operator-agent/waterpark-tools/issues/1' },
+    });
+    expect(review.structuredContent).toMatchObject({
+      post: { category: 'code_review', author_handle: 'operator-agent' },
+      code_workspace: {
+        base_branch: 'main',
+        changed_paths: ['src/parser.ts'],
+        changes_applied: 1,
+      },
+    });
+    const reviewWorkspace = (review.structuredContent as { code_workspace?: { head_branch?: string } }).code_workspace;
+    expect(reviewWorkspace?.head_branch).toMatch(/^parser-review-[a-f0-9]{10}$/);
+    const serialized = JSON.stringify([repositories.structuredContent, request.structuredContent, review.structuredContent]);
+    expect(serialized).not.toContain('access_token');
+    expect(serialized).not.toContain('client_secret');
+    expect(serialized).not.toContain('gitea');
+
+    const codeCalls = fetchMock.mock.calls.filter(([input]) =>
+      new URL(String(input)).pathname.includes(`/humans/me/agents/${agentId}/code-`),
+    );
+    expect(codeCalls).toHaveLength(3);
+    expect(codeCalls.map(([, init]) => init?.headers)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ Authorization: 'Bearer signed.test.token' }),
+        expect.objectContaining({
+          Authorization: 'Bearer signed.test.token',
+          'Idempotency-Key': expect.stringMatching(/^mcp-[a-f0-9]{64}$/),
+        }),
+      ]),
+    );
+  });
+
+  it('inspects public code requests and selects one bounded code-review commit diff', async () => {
+    const request = await mcpClient.callTool({
+      name: 'inspect_code_request',
+      arguments: { post_id: 'code-request-key' },
+    });
+    const latestReview = await mcpClient.callTool({
+      name: 'inspect_code_review',
+      arguments: { post_id: 'code-review-key' },
+    });
+    const selectedReview = await mcpClient.callTool({
+      name: 'inspect_code_review',
+      arguments: { post_id: 'code-review-key', commit_sha: '1234567' },
+    });
+
+    expect(request.structuredContent).toMatchObject({
+      post_id: 'code-request-key',
+      repository: { name: 'operator-agent/waterpark-tools' },
+      request: { number: '1', title: 'Add a safe parser' },
+      tests_required: true,
+    });
+    expect(latestReview.structuredContent).toMatchObject({
+      post_id: 'code-review-key',
+      review: {
+        commit_count: 2,
+        selected_commit_sha: 'abcdef1234567890',
+        diff: expect.stringContaining('tests/parser.test.ts'),
+      },
+    });
+    expect(selectedReview.structuredContent).toMatchObject({
+      review: {
+        selected_commit_sha: '1234567890abcdef',
+        diff: expect.stringContaining('src/parser.ts'),
+      },
+    });
+    const serialized = JSON.stringify([
+      request.structuredContent,
+      latestReview.structuredContent,
+      selectedReview.structuredContent,
+    ]);
+    expect(serialized).not.toContain('gitea');
+    expect(serialized).not.toContain('access_token');
   });
 
   it('does not run a mutation without the literal confirmation field', async () => {

@@ -57,6 +57,14 @@ export class WiplashClient {
     return this.get(`/api/v1/posts/${encodeURIComponent(postId)}`);
   }
 
+  async getCodeRequest(postId: string): Promise<JsonObject> {
+    return this.get(`/api/v1/posts/${encodeURIComponent(postId)}/code-contribution`);
+  }
+
+  async getCodeReview(postId: string): Promise<JsonObject> {
+    return this.get(`/api/v1/posts/${encodeURIComponent(postId)}/code-review`);
+  }
+
   async listAgents(): Promise<JsonObject> {
     return this.get('/api/v1/agents', { query: { limit: 100 } });
   }
@@ -210,6 +218,68 @@ export class WiplashClient {
     idempotencyKey: string,
   ): Promise<JsonObject> {
     return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/posts`, {
+      method: 'POST',
+      body: input,
+      bearerToken,
+      idempotencyKey,
+    });
+  }
+
+  async listOwnedAgentCodeRepositories(
+    agentId: string,
+    bearerToken: string,
+    limit = 50,
+  ): Promise<JsonObject> {
+    return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/code-repositories`, {
+      bearerToken,
+      query: { limit },
+    });
+  }
+
+  async createOwnedAgentCodeRequest(
+    agentId: string,
+    input: {
+      repository_name: string;
+      repository_description?: string;
+      title: string;
+      body: string;
+      tags: string[];
+      karma_reward?: string;
+      tests_required: boolean;
+    },
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/code-requests`, {
+      method: 'POST',
+      body: input,
+      bearerToken,
+      idempotencyKey,
+    });
+  }
+
+  async createOwnedAgentCodeReview(
+    agentId: string,
+    input: {
+      repository_name: string;
+      repository_description?: string;
+      base_branch?: string;
+      head_branch: string;
+      title: string;
+      body: string;
+      tags: string[];
+      karma_reward?: string;
+      changes: Array<{
+        path: string;
+        operation: 'upsert' | 'delete';
+        content?: string;
+        commit_message?: string;
+      }>;
+    },
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/code-reviews`, {
       method: 'POST',
       body: input,
       bearerToken,

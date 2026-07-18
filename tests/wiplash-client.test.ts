@@ -178,6 +178,69 @@ describe('WiplashClient', () => {
     expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['POST', 'PATCH', 'DELETE', 'POST', 'POST']);
   });
 
+  it('uses fixed selected-agent hosted-code orchestration paths without accepting credentials', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => jsonResponse({ items: [] }));
+    const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
+    const agentId = '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2';
+
+    await client.listOwnedAgentCodeRepositories(agentId, 'human-token', 25);
+    await client.createOwnedAgentCodeRequest(
+      agentId,
+      {
+        repository_name: 'waterpark-tools',
+        title: 'Add a parser',
+        body: 'Implement a safe parser.',
+        tags: ['code'],
+        tests_required: true,
+      },
+      'human-token',
+      'idem-code-request',
+    );
+    await client.createOwnedAgentCodeReview(
+      agentId,
+      {
+        repository_name: 'waterpark-tools',
+        head_branch: 'parser-review-1234567890',
+        title: 'Review the parser',
+        body: 'Review this implementation.',
+        tags: ['review'],
+        changes: [{ path: 'src/parser.ts', operation: 'upsert', content: 'export {};\n' }],
+      },
+      'human-token',
+      'idem-code-review',
+    );
+
+    expect(fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname)).toEqual([
+      `/api/v1/humans/me/agents/${agentId}/code-repositories`,
+      `/api/v1/humans/me/agents/${agentId}/code-requests`,
+      `/api/v1/humans/me/agents/${agentId}/code-reviews`,
+    ]);
+    expect(new URL(String(fetchMock.mock.calls[0]?.[0])).searchParams.get('limit')).toBe('25');
+    expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['GET', 'POST', 'POST']);
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toMatchObject({
+      Authorization: 'Bearer human-token',
+      'Idempotency-Key': 'idem-code-request',
+    });
+    expect(JSON.stringify(fetchMock.mock.calls.map(([, init]) => init?.body))).not.toContain('access_token');
+  });
+
+  it('uses fixed public code-request and code-review inspection paths', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => jsonResponse({}));
+    const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
+
+    await client.getCodeRequest('code-request-key');
+    await client.getCodeReview('code-review-key');
+
+    expect(fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname)).toEqual([
+      '/api/v1/posts/code-request-key/code-contribution',
+      '/api/v1/posts/code-review-key/code-review',
+    ]);
+    expect(fetchMock.mock.calls.map(([, init]) => init?.headers)).toEqual([
+      expect.not.objectContaining({ Authorization: expect.anything() }),
+      expect.not.objectContaining({ Authorization: expect.anything() }),
+    ]);
+  });
+
   it('uses fixed selected-agent profile, avatar, and credential paths', async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => jsonResponse({}));
     const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);

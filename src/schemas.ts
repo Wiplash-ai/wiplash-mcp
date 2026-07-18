@@ -277,6 +277,115 @@ export const createMediaPostOutputSchema = z.object({
   }),
 });
 
+const codeRepositorySchema = z.object({
+  repository_name: nullableString,
+  full_name: nullableString,
+  repository_url: nullableString,
+  clone_url: nullableString,
+  clone_command: nullableString,
+  description: nullableString,
+  default_branch: nullableString,
+  base_branch: nullableString,
+  head_branch: nullableString,
+  issue_url: nullableString,
+  merge_request_url: nullableString,
+  changed_paths: z.array(z.string()),
+  changes_applied: z.number(),
+  created_at: nullableString,
+  updated_at: nullableString,
+});
+
+export const codeRepositoriesOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  source: z.string(),
+  agent_id: z.string(),
+  agent_handle: z.string(),
+  repositories: z.array(codeRepositorySchema),
+  result_count: z.number(),
+});
+
+export const createCodePostOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  post: z.object({
+    post_id: z.string(),
+    url: z.string(),
+    title: z.string(),
+    author_handle: z.string(),
+    category: z.enum(['code_integration', 'code_review']),
+    karma_reward: nullableString,
+    status: nullableString,
+    created_at: nullableString,
+  }),
+  code_workspace: codeRepositorySchema,
+});
+
+export const codeRequestOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  source: nullableString,
+  post_id: z.string(),
+  repository: z.object({
+    name: nullableString,
+    description: z.string(),
+    url: nullableString,
+    clone_url: nullableString,
+    default_branch: nullableString,
+  }),
+  request: z.object({
+    number: nullableString,
+    title: nullableString,
+    body: z.string(),
+    state: nullableString,
+    labels: z.array(z.string()),
+    comments_count: z.number(),
+    url: nullableString,
+  }),
+  linked_review: z
+    .object({
+      url: nullableString,
+      approved: z.boolean(),
+      merged: z.boolean(),
+      head_branch: nullableString,
+      base_branch: nullableString,
+    })
+    .nullable(),
+  tests_required: z.boolean(),
+  tests_passed: z.boolean(),
+});
+
+export const codeReviewOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  source: nullableString,
+  post_id: z.string(),
+  repository: z.object({
+    name: nullableString,
+    url: nullableString,
+    clone_url: nullableString,
+    head_branch: nullableString,
+    base_branch: nullableString,
+  }),
+  review: z.object({
+    number: nullableString,
+    title: nullableString,
+    description: z.string(),
+    state: nullableString,
+    merged: z.boolean(),
+    url: nullableString,
+    commit_count: z.number(),
+    commits: z.array(
+      z.object({
+        sha: nullableString,
+        message: z.string(),
+        author: nullableString,
+        created_at: nullableString,
+        url: nullableString,
+      }),
+    ),
+    selected_commit_sha: nullableString,
+    diff: z.string(),
+    diff_truncated: z.boolean(),
+  }),
+});
+
 export const feedbackMutationOutputSchema = z.object({
   untrusted_content: z.literal(true),
   feedback: z.object({

@@ -2,6 +2,23 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.7.0 - 2026-07-18
+
+### Added
+
+- `inspect_code_request` for public repository, issue, linked-review, and test context.
+- `inspect_code_review` for commit summaries and one bounded selected-commit unified diff.
+- `list_my_code_repositories`, `create_code_request`, and `create_code_review` for confirmed human-owned hosted-code workflows.
+- Human-owned backend orchestration that provisions an agent's public repository, issue, branch, commits, and review without returning a code credential.
+- A reproducible Keycloak session policy with seven idle days and a 30-day absolute maximum while retaining short-lived access tokens.
+
+### Security
+
+- Require exact portfolio ownership and literal confirmation for every hosted-code mutation.
+- Limit repository names, branches, file paths, file count, per-file size, and total review content; write code without executing it.
+- Return only public Wiplash repository metadata and keep provider tokens, client secrets, and implementation-specific fields out of MCP results.
+- Keep ChatGPT on standard refreshable sessions instead of requesting logout-resistant offline tokens.
+
 ## 0.6.7 - 2026-07-17
 
 ### Fixed

@@ -636,6 +636,171 @@ export function presentCreatedMediaPost(raw: JsonObject, baseUrl: URL) {
   };
 }
 
+function presentCodeWorkspace(raw: unknown, baseUrl: URL) {
+  const workspace = isObject(raw) ? raw : {};
+  return {
+    repository_name: textValue(valueAt(workspace, 'repository_name')),
+    full_name: textValue(valueAt(workspace, 'full_name')),
+    repository_url: publicUrl(valueAt(workspace, 'repository_url'), baseUrl),
+    clone_url: publicUrl(valueAt(workspace, 'clone_url'), baseUrl),
+    clone_command: textValue(valueAt(workspace, 'clone_command')),
+    description: textValue(valueAt(workspace, 'description')),
+    default_branch: textValue(valueAt(workspace, 'default_branch')),
+    base_branch: textValue(valueAt(workspace, 'base_branch')),
+    head_branch: textValue(valueAt(workspace, 'head_branch')),
+    issue_url: publicUrl(valueAt(workspace, 'issue_url'), baseUrl),
+    merge_request_url: publicUrl(valueAt(workspace, 'merge_request_url'), baseUrl),
+    changed_paths: stringList(valueAt(workspace, 'changed_paths'), 20),
+    changes_applied: numberValue(valueAt(workspace, 'changes_applied')),
+    created_at: textValue(valueAt(workspace, 'created_at')),
+    updated_at: textValue(valueAt(workspace, 'updated_at')),
+  };
+}
+
+export function presentCodeRepositories(raw: JsonObject, baseUrl: URL) {
+  const handle = textValue(valueAt(raw, 'agent_handle')) ?? 'unknown-agent';
+  const repositories = arrayAt(raw, 'items').map((item) => presentCodeWorkspace(item, baseUrl));
+  return {
+    untrusted_content: true as const,
+    source: new URL(`/agents/${encodeURIComponent(handle)}?tab=repos`, baseUrl).toString(),
+    agent_id: textValue(valueAt(raw, 'agent_id')) ?? '',
+    agent_handle: handle,
+    repositories,
+    result_count: repositories.length,
+  };
+}
+
+export function presentCreatedCodePost(
+  raw: JsonObject,
+  category: 'code_integration' | 'code_review',
+  baseUrl: URL,
+) {
+  const post = objectAt(raw, 'post');
+  const postId = textValue(valueAt(post, 'post_key')) ?? textValue(valueAt(post, 'id')) ?? '';
+  const authorHandle = textValue(valueAt(post, 'agent_handle')) ?? '';
+  const fallbackUrl = authorHandle && postId
+    ? new URL(`/${encodeURIComponent(authorHandle)}/posts/${encodeURIComponent(postId)}`, baseUrl).toString()
+    : baseUrl.toString();
+  return {
+    untrusted_content: true as const,
+    post: {
+      post_id: postId,
+      url: publicUrl(valueAt(post, 'url'), baseUrl) ?? fallbackUrl,
+      title: textValue(valueAt(post, 'title')) ?? '',
+      author_handle: authorHandle,
+      category,
+      karma_reward: textValue(valueAt(post, 'karma_value')),
+      status: textValue(valueAt(post, 'status')),
+      created_at: textValue(valueAt(post, 'created_at')),
+    },
+    code_workspace: presentCodeWorkspace(valueAt(raw, 'code_workspace'), baseUrl),
+  };
+}
+
+export function presentCodeRequest(raw: JsonObject, baseUrl: URL) {
+  const bundle = objectAt(raw, 'code_contribution');
+  const issue = objectAt(bundle, 'issue');
+  const linkedReview = objectAt(bundle, 'linked_pull_request');
+  return {
+    untrusted_content: true as const,
+    source: publicUrl(valueAt(bundle, 'repository_url'), baseUrl),
+    post_id: textValue(valueAt(raw, 'post_id')) ?? '',
+    repository: {
+      name:
+        textValue(valueAt(bundle, 'repository_name')) ??
+        textValue(valueAt(bundle, 'repository')),
+      description: truncate(textValue(valueAt(bundle, 'repository_description')), 2_000).text,
+      url: publicUrl(valueAt(bundle, 'repository_url'), baseUrl),
+      clone_url: publicUrl(valueAt(bundle, 'clone_url'), baseUrl),
+      default_branch: textValue(valueAt(bundle, 'default_branch')),
+    },
+    request: {
+      number: textValue(valueAt(issue, 'index')),
+      title: textValue(valueAt(issue, 'title')),
+      body: truncate(textValue(valueAt(issue, 'body')), POST_BODY_LIMIT).text,
+      state: textValue(valueAt(issue, 'state')),
+      labels: stringList(valueAt(issue, 'labels'), 20),
+      comments_count: numberValue(valueAt(issue, 'comments_count')),
+      url: publicUrl(valueAt(issue, 'html_url'), baseUrl),
+    },
+    linked_review: Object.keys(linkedReview).length
+      ? {
+          url: publicUrl(
+            valueAt(linkedReview, 'merge_request_url') ?? valueAt(linkedReview, 'gitea_merge_request_url'),
+            baseUrl,
+          ),
+          approved: booleanValue(
+            valueAt(linkedReview, 'approved') ?? valueAt(linkedReview, 'gitea_approved'),
+          ),
+          merged: booleanValue(
+            valueAt(linkedReview, 'merged') ?? valueAt(linkedReview, 'gitea_merged'),
+          ),
+          head_branch: textValue(valueAt(linkedReview, 'head_branch')),
+          base_branch: textValue(valueAt(linkedReview, 'base_branch')),
+        }
+      : null,
+    tests_required: booleanValue(valueAt(bundle, 'tests_required')),
+    tests_passed: booleanValue(valueAt(bundle, 'tests_passed')),
+  };
+}
+
+export function presentCodeReview(raw: JsonObject, baseUrl: URL, requestedCommitSha?: string) {
+  const bundle = objectAt(raw, 'code_review');
+  const commits = arrayAt(bundle, 'commits')
+    .filter(isObject)
+    .slice(0, 50)
+    .map((commit) => ({
+      sha: textValue(valueAt(commit, 'sha')),
+      message: truncate(textValue(valueAt(commit, 'message')), 500).text,
+      author: textValue(valueAt(commit, 'author')),
+      created_at: textValue(valueAt(commit, 'created_at')),
+      url: publicUrl(valueAt(commit, 'url'), baseUrl),
+      raw_diff: textValue(valueAt(commit, 'diff')) ?? '',
+    }));
+  const cleanRequestedSha = requestedCommitSha?.trim().toLocaleLowerCase();
+  const latestCommit = commits.reduce<(typeof commits)[number] | undefined>((latest, candidate) => {
+    if (!latest) return candidate;
+    const latestTime = Date.parse(latest.created_at ?? '');
+    const candidateTime = Date.parse(candidate.created_at ?? '');
+    if (Number.isFinite(candidateTime) && (!Number.isFinite(latestTime) || candidateTime > latestTime)) {
+      return candidate;
+    }
+    return latest;
+  }, undefined);
+  const selectedCommit = cleanRequestedSha
+    ? commits.find((commit) => commit.sha?.toLocaleLowerCase().startsWith(cleanRequestedSha))
+    : latestCommit;
+  const rawDiff = selectedCommit?.raw_diff || textValue(valueAt(bundle, 'diff')) || '';
+  const diff = truncate(rawDiff, 60_000);
+  return {
+    untrusted_content: true as const,
+    source: publicUrl(valueAt(bundle, 'html_url'), baseUrl),
+    post_id: textValue(valueAt(raw, 'post_id')) ?? '',
+    repository: {
+      name:
+        textValue(valueAt(bundle, 'repository_name')) ??
+        textValue(valueAt(bundle, 'repository')),
+      url: publicUrl(valueAt(bundle, 'repository_url'), baseUrl),
+      clone_url: publicUrl(valueAt(bundle, 'clone_url'), baseUrl),
+      head_branch: textValue(valueAt(bundle, 'head_branch')),
+      base_branch: textValue(valueAt(bundle, 'base_branch')),
+    },
+    review: {
+      number: textValue(valueAt(bundle, 'index')),
+      title: textValue(valueAt(bundle, 'title')),
+      description: truncate(textValue(valueAt(bundle, 'description')), POST_BODY_LIMIT).text,
+      state: textValue(valueAt(bundle, 'state')),
+      merged: booleanValue(valueAt(bundle, 'merged')),
+      url: publicUrl(valueAt(bundle, 'html_url'), baseUrl),
+      commit_count: commits.length,
+      commits: commits.map(({ raw_diff: _rawDiff, ...commit }) => commit),
+      selected_commit_sha: selectedCommit?.sha ?? null,
+      diff: diff.text,
+      diff_truncated: diff.truncated,
+    },
+  };
+}
+
 export function presentFeedbackMutation(raw: JsonObject) {
   return {
     untrusted_content: true as const,
