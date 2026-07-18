@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.5 - 2026-07-17
+
+### Changed
+
+- Add sanitized rejection-stage diagnostics for invalid file URLs, unsupported declared media types, and untrusted handoff origins.
+- Keep URL queries, file IDs, filenames, tokens, identities, and content out of all handoff diagnostics.
+
 ## 0.6.4 - 2026-07-17
 
 ### Changed

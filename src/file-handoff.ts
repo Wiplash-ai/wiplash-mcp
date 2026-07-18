@@ -144,6 +144,7 @@ export async function downloadChatGptMediaFile(
   }
   const declaredType = normalizedContentType(reference.mime_type);
   if (declaredType && !ALLOWED_CONTENT_TYPES.has(declaredType)) {
+    logHandoff('rejected_unsupported_declared_mime', { declared_mime: declaredType });
     throw new PublicMcpError('unsupported_media_type', 'Use a supported image, PDF, audio, or video file.', 422);
   }
 
@@ -151,6 +152,7 @@ export async function downloadChatGptMediaFile(
   try {
     url = new URL(reference.download_url);
   } catch {
+    logHandoff('rejected_invalid_url', {});
     throw new PublicMcpError('invalid_media_file', 'The ChatGPT file handoff URL is invalid.', 422);
   }
   if (
@@ -160,6 +162,13 @@ export async function downloadChatGptMediaFile(
     url.password ||
     (url.port && url.port !== '443')
   ) {
+    logHandoff('rejected_untrusted_source', {
+      host: url.hostname.toLocaleLowerCase() || 'missing',
+      path: url.pathname || '/',
+      protocol: url.protocol || 'missing',
+      port: url.port || 'default',
+      has_url_credentials: Boolean(url.username || url.password),
+    });
     throw new PublicMcpError(
       'untrusted_media_source',
       'Only temporary ChatGPT file handoff URLs from OpenAI file storage are accepted.',
