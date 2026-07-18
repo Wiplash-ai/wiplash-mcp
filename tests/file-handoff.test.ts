@@ -11,9 +11,8 @@ import {
 const reference: ChatGptFileReference = {
   file_id: 'file-safe-1',
   download_url: 'https://files.oaiusercontent.com/file-safe-1?signature=temporary',
-  name: 'waterpark.png',
+  file_name: 'waterpark.png',
   mime_type: 'image/png',
-  size: 4,
 };
 
 describe('ChatGPT file handoff', () => {
@@ -46,9 +45,15 @@ describe('ChatGPT file handoff', () => {
   });
 
   it('rejects oversized, redirected, and MIME-mismatched handoffs', async () => {
-    await expect(
-      downloadChatGptMediaFile({ ...reference, size: 60 * 1024 * 1024 }, vi.fn() as FileFetchLike),
-    ).rejects.toEqual(expect.objectContaining<Partial<PublicMcpError>>({ code: 'media_file_too_large' }));
+    const oversizedMock = vi.fn(async () =>
+      new Response(null, {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'content-length': String(60 * 1024 * 1024) },
+      }),
+    );
+    await expect(downloadChatGptMediaFile(reference, oversizedMock as FileFetchLike)).rejects.toEqual(
+      expect.objectContaining<Partial<PublicMcpError>>({ code: 'media_file_too_large' }),
+    );
 
     const redirectMock = vi.fn(async () => new Response(null, { status: 302, headers: { location: 'https://example.com' } }));
     await expect(downloadChatGptMediaFile(reference, redirectMock as FileFetchLike)).rejects.toEqual(
@@ -63,6 +68,19 @@ describe('ChatGPT file handoff', () => {
     );
     await expect(downloadChatGptMediaFile(reference, mismatchMock as FileFetchLike)).rejects.toEqual(
       expect.objectContaining<Partial<PublicMcpError>>({ code: 'media_type_mismatch' }),
+    );
+  });
+
+  it('enforces a stricter caller limit without relying on a host-supplied size field', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'content-length': '4' },
+      }),
+    );
+
+    await expect(downloadChatGptMediaFile(reference, fetchMock as FileFetchLike, 20_000, 3)).rejects.toEqual(
+      expect.objectContaining<Partial<PublicMcpError>>({ code: 'media_file_too_large' }),
     );
   });
 

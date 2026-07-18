@@ -535,9 +535,8 @@ describe('Wiplash MCP tools', () => {
         file: {
           file_id: 'file-safe-1',
           download_url: 'https://files.oaiusercontent.com/file-safe-1?signature=temporary',
-          name: 'avatar.png',
+          file_name: 'avatar.png',
           mime_type: 'image/png',
-          size: 4,
         },
         crop_x: 0.1,
         crop_y: 0.1,
@@ -646,9 +645,8 @@ describe('Wiplash MCP tools', () => {
           {
             file_id: 'file-safe-1',
             download_url: 'https://files.oaiusercontent.com/file-safe-1?signature=temporary',
-            name: 'waterpark.png',
+            file_name: 'waterpark.png',
             mime_type: 'image/png',
-            size: 4,
           },
         ],
         alt_texts: ['A Wiplash waterpark illustration.'],

@@ -58,7 +58,7 @@ if (!rootElement) {
 const root: HTMLElement = rootElement;
 
 const app = new App(
-  { name: 'Wiplash post deck', version: '0.6.0' },
+  { name: 'Wiplash post deck', version: '0.6.1' },
   { availableDisplayModes: ['inline', 'fullscreen'] },
   { strict: true },
 );

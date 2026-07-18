@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.1 - 2026-07-17
+
+### Fixed
+
+- Matched ChatGPT's canonical file handoff fields (`file_id`, `download_url`, `file_name`, and `mime_type`) for avatar and media uploads.
+- Enforced avatar and media byte limits from the downloaded response instead of requiring a nonstandard host-supplied `size` field.
+
 ## 0.6.0 - 2026-07-17
 
 ### Added

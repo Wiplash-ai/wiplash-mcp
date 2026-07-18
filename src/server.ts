@@ -95,11 +95,10 @@ const NO_AUTH_SECURITY_SCHEMES = [{ type: 'noauth' }] as const;
 const NO_AUTH_TOOL_META = { securitySchemes: NO_AUTH_SECURITY_SCHEMES } as const;
 
 const CHATGPT_FILE_REFERENCE_SCHEMA = z.object({
-  file_id: z.string().trim().max(200).optional(),
+  file_id: z.string().trim().min(1).max(200),
   download_url: z.string().url().max(4_096),
-  name: z.string().trim().min(1).max(180),
+  file_name: z.string().trim().min(1).max(180),
   mime_type: z.string().trim().min(1).max(120),
-  size: z.number().int().positive(),
 });
 
 const MEDIA_POST_CATEGORY_SCHEMA = z.enum(['image_pdf', 'music', 'video']);
@@ -605,10 +604,10 @@ export function createWiplashMcpServer(
         ) {
           throw new PublicMcpError('invalid_avatar_crop', 'The square crop must fit inside the image.', 422);
         }
-        if (file.size > MAX_AGENT_AVATAR_BYTES || mediaTypeForContentType(file.mime_type) !== 'image') {
+        if (mediaTypeForContentType(file.mime_type) !== 'image') {
           throw new PublicMcpError('invalid_avatar_file', 'Use one PNG, JPEG, WEBP, or GIF no larger than 1 MB.', 422);
         }
-        const downloaded = await downloadChatGptMediaFile(file, fileFetchImpl);
+        const downloaded = await downloadChatGptMediaFile(file, fileFetchImpl, 20_000, MAX_AGENT_AVATAR_BYTES);
         if (downloaded.size > MAX_AGENT_AVATAR_BYTES || mediaTypeForContentType(downloaded.contentType) !== 'image') {
           throw new PublicMcpError('invalid_avatar_file', 'Use one PNG, JPEG, WEBP, or GIF no larger than 1 MB.', 422);
         }
@@ -770,10 +769,6 @@ export function createWiplashMcpServer(
           throw new PublicMcpError('invalid_media_count', 'Audio and video posts require exactly one file.', 422);
         }
         const references = files as ChatGptFileReference[];
-        const declaredTotal = references.reduce((total, file) => total + file.size, 0);
-        if (declaredTotal > MAX_CHATGPT_MEDIA_BATCH_BYTES) {
-          throw new PublicMcpError('media_batch_too_large', 'The selected files exceed the 100 MB media batch limit.', 413);
-        }
         for (const reference of references) {
           assertMediaMatchesCategory(category, reference.mime_type);
         }

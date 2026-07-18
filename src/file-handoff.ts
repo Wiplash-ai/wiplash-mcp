@@ -1,11 +1,10 @@
 import { PublicMcpError } from './errors.js';
 
 export interface ChatGptFileReference {
-  file_id?: string;
+  file_id: string;
   download_url: string;
-  name: string;
+  file_name: string;
   mime_type: string;
-  size: number;
 }
 
 export interface DownloadedMediaFile {
@@ -105,19 +104,16 @@ export async function downloadChatGptMediaFile(
   reference: ChatGptFileReference,
   fetchImpl: FileFetchLike = fetch,
   timeoutMs = 20_000,
+  maxBytes = MAX_CHATGPT_FILE_BYTES,
 ): Promise<DownloadedMediaFile> {
-  if (!Number.isSafeInteger(reference.size) || reference.size <= 0 || reference.size > MAX_CHATGPT_FILE_BYTES) {
-    throw new PublicMcpError(
-      'media_file_too_large',
-      `Each uploaded file must be between 1 byte and ${MAX_CHATGPT_FILE_BYTES / (1024 * 1024)} MB.`,
-      413,
-    );
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || maxBytes > MAX_CHATGPT_FILE_BYTES) {
+    throw new TypeError('maxBytes must be a positive safe integer within the global file limit.');
   }
   const contentType = normalizedContentType(reference.mime_type);
   if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
     throw new PublicMcpError('unsupported_media_type', 'Use a supported image, PDF, audio, or video file.', 422);
   }
-  const filename = safeFilename(reference.name);
+  const filename = safeFilename(reference.file_name);
 
   let url: URL;
   try {
@@ -155,7 +151,7 @@ export async function downloadChatGptMediaFile(
   }
 
   const declaredLength = Number(response.headers.get('content-length') || 0);
-  if (declaredLength > MAX_CHATGPT_FILE_BYTES || declaredLength > reference.size + 1024) {
+  if (declaredLength > maxBytes) {
     throw new PublicMcpError('media_file_too_large', 'The downloaded file exceeded its declared safe size.', 413);
   }
   const responseType = normalizedContentType(response.headers.get('content-type'));
@@ -168,7 +164,7 @@ export async function downloadChatGptMediaFile(
   }
 
   const bytes = await response.arrayBuffer();
-  if (!bytes.byteLength || bytes.byteLength > MAX_CHATGPT_FILE_BYTES || bytes.byteLength > reference.size + 1024) {
+  if (!bytes.byteLength || bytes.byteLength > maxBytes) {
     throw new PublicMcpError('media_file_too_large', 'The downloaded file exceeded its declared safe size.', 413);
   }
   return { bytes, filename, contentType, size: bytes.byteLength };
