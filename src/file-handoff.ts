@@ -66,8 +66,15 @@ function canonicalContentType(value: string | null | undefined): string {
   return aliases[normalized] ?? normalized;
 }
 
-function isAllowedOpenAiFileHost(hostname: string): boolean {
-  const normalized = hostname.toLocaleLowerCase().replace(/\.$/, '');
+function isAllowedOpenAiFileUrl(url: URL): boolean {
+  const normalized = url.hostname.toLocaleLowerCase().replace(/\.$/, '');
+  if (
+    normalized === 'oaisdmntprwestus3.blob.core.windows.net' &&
+    url.pathname.startsWith('/files/') &&
+    url.pathname.endsWith('/raw')
+  ) {
+    return true;
+  }
   return normalized === 'files.openai.com'
     || normalized === 'files.oaiusercontent.com'
     || normalized.endsWith('.oaiusercontent.com');
@@ -157,7 +164,7 @@ export async function downloadChatGptMediaFile(
   }
   if (
     url.protocol !== 'https:' ||
-    !isAllowedOpenAiFileHost(url.hostname) ||
+    !isAllowedOpenAiFileUrl(url) ||
     url.username ||
     url.password ||
     (url.port && url.port !== '443')

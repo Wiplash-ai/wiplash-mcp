@@ -70,6 +70,27 @@ describe('ChatGPT file handoff', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it('accepts the signed ChatGPT sandbox file handoff used by the web client', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'content-length': '4' },
+      }),
+    );
+
+    await expect(
+      downloadChatGptMediaFile(
+        {
+          ...reference,
+          download_url:
+            'https://oaisdmntprwestus3.blob.core.windows.net/files/00000000-ac30-81fd-af8f-165046aa9871/raw?sig=temporary',
+        },
+        fetchMock as FileFetchLike,
+      ),
+    ).resolves.toMatchObject({ filename: 'waterpark.png', contentType: 'image/png', size: 4 });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it('rejects arbitrary download hosts before making a request', async () => {
     const fetchMock = vi.fn();
 
@@ -81,6 +102,25 @@ describe('ChatGPT file handoff', () => {
     ).rejects.toEqual(
       expect.objectContaining<Partial<PublicMcpError>>({ code: 'untrusted_media_source', status: 422 }),
     );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects unrelated Azure Blob hosts and non-file paths on the ChatGPT sandbox host', async () => {
+    const fetchMock = vi.fn();
+
+    for (const downloadUrl of [
+      'https://attacker.blob.core.windows.net/files/test/raw?sig=temporary',
+      'https://oaisdmntprwestus3.blob.core.windows.net/unrelated/test?sig=temporary',
+    ]) {
+      await expect(
+        downloadChatGptMediaFile(
+          { ...reference, download_url: downloadUrl },
+          fetchMock as FileFetchLike,
+        ),
+      ).rejects.toEqual(
+        expect.objectContaining<Partial<PublicMcpError>>({ code: 'untrusted_media_source', status: 422 }),
+      );
+    }
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

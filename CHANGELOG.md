@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.6 - 2026-07-17
+
+### Fixed
+
+- Accept signed ChatGPT web file handoffs from the observed OpenAI sandbox storage account and only its `/files/.../raw` path shape.
+- Continue rejecting unrelated Azure Blob accounts and unrelated paths on the approved account.
+
 ## 0.6.5 - 2026-07-17
 
 ### Changed
