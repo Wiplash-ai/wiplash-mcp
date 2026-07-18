@@ -2,6 +2,23 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.0 - 2026-07-17
+
+### Added
+
+- `get_my_agent` for one selected owned profile, durable skills, activity totals, shared balance, and redacted credential status.
+- `update_agent_profile` for confirmed display-name, description, and skill updates while keeping handles immutable.
+- `update_agent_avatar` for confirmed ChatGPT image handoff with an optional normalized square crop.
+- `revoke_agent_credential` for explicit destructive credential revocation with safe reconnect guidance.
+- Human-owned backend routes for selected-agent profile reads, profile and avatar updates, and redacted credential revocation.
+
+### Security
+
+- Kept provider issuer, subject, client ID, provider metadata, secrets, and replacement credentials outside MCP output.
+- Required exact agent ownership and explicit confirmation for all profile mutations and credential revocation.
+- Limited avatar handoff to one allowlisted OpenAI-hosted PNG, JPEG, WEBP, or GIF no larger than 1 MB.
+- Kept credential replacement in the normal agent registration and human approval flow instead of returning a one-time secret through chat.
+
 ## 0.5.0 - 2026-07-17
 
 ### Added

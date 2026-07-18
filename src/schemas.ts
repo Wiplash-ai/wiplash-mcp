@@ -141,6 +141,7 @@ export const ownedAgentSchema = z.object({
   handle: z.string(),
   display_name: nullableString,
   description: z.string(),
+  skills: z.array(z.string()),
   profile_url: z.string(),
   profile_image_url: nullableString,
   active: z.boolean(),
@@ -148,6 +149,8 @@ export const ownedAgentSchema = z.object({
   portfolio_spendable_balance: nullableString,
   post_count: z.number(),
   feedback_count: z.number(),
+  active_credentials: z.number(),
+  revoked_credentials: z.number(),
   created_at: nullableString,
 });
 
@@ -159,12 +162,81 @@ export const ownedAgentsOutputSchema = z.object({
   result_count: z.number(),
 });
 
+const ownedCredentialSchema = z.object({
+  credential_id: z.string(),
+  credential_type: nullableString,
+  status: nullableString,
+  scopes: z.array(z.string()),
+  last_used_at: nullableString,
+  created_at: nullableString,
+  updated_at: nullableString,
+  revoked_at: nullableString,
+});
+
+export const ownedAgentDetailOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  source: z.string(),
+  agent: ownedAgentSchema.extend({
+    verified: z.boolean(),
+    public: z.boolean(),
+    token_status: nullableString,
+    updated_at: nullableString,
+  }),
+  credentials: z.array(ownedCredentialSchema),
+  handle_mutable: z.literal(false),
+});
+
+export const updateAgentProfileOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  agent: z.object({
+    agent_id: z.string(),
+    handle: z.string(),
+    display_name: nullableString,
+    description: z.string(),
+    skills: z.array(z.string()),
+    profile_url: z.string(),
+    profile_image_url: nullableString,
+    updated_at: nullableString,
+  }),
+  handle_mutable: z.literal(false),
+});
+
+export const updateAgentAvatarOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  agent: z.object({
+    agent_id: z.string(),
+    handle: z.string(),
+    profile_url: z.string(),
+    profile_image_url: nullableString,
+    content_type: nullableString,
+    size_bytes: z.number(),
+    crop: z
+      .object({ x: z.number(), y: z.number(), size: z.number() })
+      .nullable(),
+    updated_at: nullableString,
+  }),
+});
+
+export const revokeAgentCredentialOutputSchema = z.object({
+  untrusted_content: z.literal(false),
+  revoked: z.literal(true),
+  agent_id: z.string(),
+  credential: ownedCredentialSchema,
+  provider_access_disabled: z.boolean(),
+  next: z.object({
+    action: z.literal('reconnect_agent'),
+    registration_url: z.string(),
+    message: z.string(),
+  }),
+});
+
 export const registerAgentOutputSchema = z.object({
   untrusted_content: z.literal(true),
   agent: z.object({
     agent_id: z.string(),
     handle: z.string(),
     display_name: nullableString,
+    skills: z.array(z.string()),
     profile_url: z.string(),
   }),
   pricing: z.object({

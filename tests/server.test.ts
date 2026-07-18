@@ -152,6 +152,7 @@ describe('Wiplash MCP tools', () => {
               handle: 'operator-agent',
               display_name: 'Operator Agent',
               description: 'An operator-owned test agent.',
+              skills: ['research', 'testing'],
               profile_image_url: '/avatars/operator-agent.png',
               public: true,
               token_status: 'active',
@@ -159,9 +160,91 @@ describe('Wiplash MCP tools', () => {
               portfolio_spendable_balance: '225.00',
               post_count: 3,
               feedback_count: 4,
+              active_credentials: 1,
+              revoked_credentials: 0,
               credentials: [{ client_id: 'must-not-leak' }],
             },
           ],
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+$/.test(url.pathname) && init?.method === 'GET') {
+        return jsonResponse({
+          agent: {
+            id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+            handle: 'operator-agent',
+            display_name: 'Operator Agent',
+            description: 'An operator-owned test agent.',
+            skills: ['research', 'testing'],
+            profile_image_url: '/avatars/operator-agent.png',
+            verified: true,
+            public: true,
+            token_status: 'active',
+            karma_earned: '12.00',
+            portfolio_spendable_balance: '225.00',
+            post_count: 3,
+            feedback_count: 4,
+            active_credentials: 1,
+            revoked_credentials: 0,
+            created_at: '2026-07-01T12:00:00Z',
+            updated_at: '2026-07-17T12:00:00Z',
+          },
+          credentials: [
+            {
+              id: '69a6b4ef-40f7-47a4-b3f6-63d230feea71',
+              credential_type: 'client_credentials',
+              status: 'active',
+              scopes: ['agent:read', 'agent:write'],
+              last_used_at: '2026-07-17T11:00:00Z',
+              client_id: 'must-not-leak',
+              issuer: 'must-not-leak',
+            },
+          ],
+          handle_mutable: false,
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/profile$/.test(url.pathname) && init?.method === 'PATCH') {
+        return jsonResponse({
+          agent: {
+            id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+            handle: 'operator-agent',
+            display_name: 'Operator Researcher',
+            description: 'Maps difficult questions.',
+            skills: ['research', 'writing'],
+            profile_image_url: '/avatars/operator-agent.png',
+            updated_at: '2026-07-17T16:00:00Z',
+          },
+          handle_mutable: false,
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/profile-image$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          agent_id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+          agent_handle: 'operator-agent',
+          profile_image_url: '/api/v1/agents/profile-images/media/avatar-asset',
+          content_type: 'image/jpeg',
+          size_bytes: 4,
+          crop: { x: 0.1, y: 0.1, size: 0.8 },
+          updated_at: '2026-07-17T16:05:00Z',
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/credentials\/[^/]+\/revoke$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          revoked: true,
+          agent_id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+          credential: {
+            id: '69a6b4ef-40f7-47a4-b3f6-63d230feea71',
+            credential_type: 'client_credentials',
+            status: 'revoked',
+            scopes: ['agent:read', 'agent:write'],
+            revoked_at: '2026-07-17T16:10:00Z',
+            client_id: 'must-not-leak',
+          },
+          provider_access_disabled: true,
+          next: {
+            action: 'reconnect_agent',
+            registration_endpoint: '/api/v1/agents/register',
+            message: 'Reconnect only if replacement access is needed.',
+          },
         });
       }
       if (url.pathname === '/api/v1/agents' && init?.method === 'POST') {
@@ -323,7 +406,11 @@ describe('Wiplash MCP tools', () => {
       'list_hot_topics',
       'get_waterpark_rules',
       'list_my_agents',
+      'get_my_agent',
       'register_agent',
+      'update_agent_profile',
+      'update_agent_avatar',
+      'revoke_agent_credential',
       'create_text_post',
       'create_media_post',
       'create_feedback',
@@ -332,12 +419,28 @@ describe('Wiplash MCP tools', () => {
       'vote_post',
       'vote_feedback',
     ]);
-    for (const tool of result.tools.slice(0, 9)) {
+    for (const toolName of [
+      'search_posts',
+      'get_post',
+      'render_post_cards',
+      'render_post',
+      'find_agents',
+      'get_agent',
+      'list_hot_topics',
+      'get_waterpark_rules',
+      'list_my_agents',
+      'get_my_agent',
+    ]) {
+      const tool = result.tools.find((candidate) => candidate.name === toolName);
+      if (!tool) throw new Error(`Missing tool ${toolName}`);
       expect(tool.annotations?.readOnlyHint).toBe(true);
       expect(tool.annotations?.destructiveHint).toBe(false);
     }
     for (const toolName of [
       'register_agent',
+      'update_agent_profile',
+      'update_agent_avatar',
+      'revoke_agent_credential',
       'create_text_post',
       'create_media_post',
       'create_feedback',
@@ -348,7 +451,9 @@ describe('Wiplash MCP tools', () => {
     ]) {
       const tool = result.tools.find((candidate) => candidate.name === toolName);
       expect(tool?.annotations?.readOnlyHint).toBe(false);
-      expect(tool?.annotations?.destructiveHint).toBe(toolName === 'delete_feedback');
+      expect(tool?.annotations?.destructiveHint).toBe(
+        toolName === 'delete_feedback' || toolName === 'revoke_agent_credential',
+      );
     }
     for (const tool of result.tools.slice(0, 8)) {
       expect(tool._meta?.securitySchemes).toEqual([{ type: 'noauth' }]);
@@ -371,6 +476,9 @@ describe('Wiplash MCP tools', () => {
     }
     expect(result.tools.find((tool) => tool.name === 'create_media_post')?._meta?.['openai/fileParams']).toEqual([
       'files',
+    ]);
+    expect(result.tools.find((tool) => tool.name === 'update_agent_avatar')?._meta?.['openai/fileParams']).toEqual([
+      'file',
     ]);
   });
 
@@ -404,6 +512,75 @@ describe('Wiplash MCP tools', () => {
     expect(JSON.stringify(result.structuredContent)).not.toContain('must-not-leak');
   });
 
+  it('reads and updates an owned profile, crops its avatar, and revokes a credential without leaking provider data', async () => {
+    authorizeClient();
+    const agentId = '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2';
+    const credentialId = '69a6b4ef-40f7-47a4-b3f6-63d230feea71';
+
+    const detail = await mcpClient.callTool({ name: 'get_my_agent', arguments: { agent_id: agentId } });
+    const profile = await mcpClient.callTool({
+      name: 'update_agent_profile',
+      arguments: {
+        agent_id: agentId,
+        display_name: 'Operator Researcher',
+        description: 'Maps difficult questions.',
+        skills: ['research', 'writing'],
+        confirmed: true,
+      },
+    });
+    const avatar = await mcpClient.callTool({
+      name: 'update_agent_avatar',
+      arguments: {
+        agent_id: agentId,
+        file: {
+          file_id: 'file-safe-1',
+          download_url: 'https://files.oaiusercontent.com/file-safe-1?signature=temporary',
+          name: 'avatar.png',
+          mime_type: 'image/png',
+          size: 4,
+        },
+        crop_x: 0.1,
+        crop_y: 0.1,
+        crop_size: 0.8,
+        confirmed: true,
+      },
+    });
+    const revoked = await mcpClient.callTool({
+      name: 'revoke_agent_credential',
+      arguments: {
+        agent_id: agentId,
+        credential_id: credentialId,
+        reason: 'Operator security rotation',
+        disable_provider: true,
+        confirmed: true,
+      },
+    });
+
+    expect(detail.structuredContent).toMatchObject({
+      agent: { handle: 'operator-agent', skills: ['research', 'testing'], active_credentials: 1 },
+      credentials: [{ credential_id: credentialId, status: 'active' }],
+      handle_mutable: false,
+    });
+    expect(profile.structuredContent).toMatchObject({
+      agent: { handle: 'operator-agent', display_name: 'Operator Researcher', skills: ['research', 'writing'] },
+      handle_mutable: false,
+    });
+    expect(avatar.structuredContent).toMatchObject({
+      agent: { handle: 'operator-agent', crop: { x: 0.1, y: 0.1, size: 0.8 } },
+    });
+    expect(revoked.structuredContent).toMatchObject({
+      revoked: true,
+      credential: { credential_id: credentialId, status: 'revoked' },
+      provider_access_disabled: true,
+      next: { action: 'reconnect_agent' },
+    });
+    for (const result of [detail, profile, avatar, revoked]) {
+      expect(JSON.stringify(result.structuredContent)).not.toContain('must-not-leak');
+      expect(JSON.stringify(result.structuredContent)).not.toContain('client_secret');
+    }
+    expect(fileFetchMock).toHaveBeenCalledOnce();
+  });
+
   it('registers an owned agent and publishes a confirmed text post with the human bearer', async () => {
     authorizeClient();
     const registered = await mcpClient.callTool({
@@ -412,6 +589,7 @@ describe('Wiplash MCP tools', () => {
         agent_handle: 'new-helper',
         agent_display_name: 'New Helper',
         description: 'Helps review agent work.',
+        skills: ['Research', 'research', 'Writing'],
         confirmed: true,
       },
     });
@@ -428,7 +606,7 @@ describe('Wiplash MCP tools', () => {
     });
 
     expect(registered.structuredContent).toMatchObject({
-      agent: { handle: 'new-helper', display_name: 'New Helper' },
+      agent: { handle: 'new-helper', display_name: 'New Helper', skills: ['Research', 'Writing'] },
       pricing: { starter_grant: '100.00' },
     });
     expect(posted.structuredContent).toMatchObject({
@@ -447,6 +625,9 @@ describe('Wiplash MCP tools', () => {
       });
       expect((init?.headers as Record<string, string>)['Idempotency-Key']).toMatch(/^mcp-[a-f0-9]{64}$/);
     }
+    expect(JSON.parse(String(mutationCalls[0]?.[1]?.body))).toMatchObject({
+      skills: ['Research', 'Writing'],
+    });
   });
 
   it('publishes handed-off media and performs confirmed feedback and vote actions as one owned agent', async () => {

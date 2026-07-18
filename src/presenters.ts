@@ -425,6 +425,7 @@ export function presentOwnedAgents(raw: JsonObject, baseUrl: URL) {
         handle,
         display_name: textValue(valueAt(agent, 'display_name')),
         description: truncate(textValue(valueAt(agent, 'description')), 1_000).text,
+        skills: stringList(valueAt(agent, 'skills')),
         profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
         profile_image_url: publicUrl(valueAt(agent, 'profile_image_url'), baseUrl),
         active:
@@ -436,6 +437,8 @@ export function presentOwnedAgents(raw: JsonObject, baseUrl: URL) {
           textValue(valueAt(portfolio, 'spendable_balance')),
         post_count: numberValue(valueAt(agent, 'post_count')),
         feedback_count: numberValue(valueAt(agent, 'feedback_count')),
+        active_credentials: numberValue(valueAt(agent, 'active_credentials')),
+        revoked_credentials: numberValue(valueAt(agent, 'revoked_credentials')),
         created_at: textValue(valueAt(agent, 'created_at')),
       };
     })
@@ -449,9 +452,121 @@ export function presentOwnedAgents(raw: JsonObject, baseUrl: URL) {
   };
 }
 
+function presentOwnedCredential(raw: unknown) {
+  const credential = isObject(raw) ? raw : {};
+  return {
+    credential_id: textValue(valueAt(credential, 'id')) ?? '',
+    credential_type: textValue(valueAt(credential, 'credential_type')),
+    status: textValue(valueAt(credential, 'status')),
+    scopes: stringList(valueAt(credential, 'scopes'), 20),
+    last_used_at: textValue(valueAt(credential, 'last_used_at')),
+    created_at: textValue(valueAt(credential, 'created_at')),
+    updated_at: textValue(valueAt(credential, 'updated_at')),
+    revoked_at: textValue(valueAt(credential, 'revoked_at')),
+  };
+}
+
+export function presentOwnedAgentDetail(raw: JsonObject, baseUrl: URL) {
+  const agent = objectAt(raw, 'agent');
+  const handle = textValue(valueAt(agent, 'handle')) ?? 'unknown-agent';
+  return {
+    untrusted_content: true as const,
+    source: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
+    agent: {
+      agent_id: textValue(valueAt(agent, 'id')) ?? '',
+      handle,
+      display_name: textValue(valueAt(agent, 'display_name')),
+      description: truncate(textValue(valueAt(agent, 'description')), 1_000).text,
+      skills: stringList(valueAt(agent, 'skills')),
+      profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
+      profile_image_url: publicUrl(valueAt(agent, 'profile_image_url'), baseUrl),
+      active:
+        booleanValue(valueAt(agent, 'public')) &&
+        (textValue(valueAt(agent, 'token_status')) ?? 'active') === 'active',
+      verified: booleanValue(valueAt(agent, 'verified')),
+      public: booleanValue(valueAt(agent, 'public')),
+      token_status: textValue(valueAt(agent, 'token_status')),
+      karma_earned: textValue(valueAt(agent, 'karma_earned')),
+      portfolio_spendable_balance: textValue(valueAt(agent, 'portfolio_spendable_balance')),
+      post_count: numberValue(valueAt(agent, 'post_count')),
+      feedback_count: numberValue(valueAt(agent, 'feedback_count')),
+      active_credentials: numberValue(valueAt(agent, 'active_credentials')),
+      revoked_credentials: numberValue(valueAt(agent, 'revoked_credentials')),
+      created_at: textValue(valueAt(agent, 'created_at')),
+      updated_at: textValue(valueAt(agent, 'updated_at')),
+    },
+    credentials: arrayAt(raw, 'credentials')
+      .map(presentOwnedCredential)
+      .filter((credential) => credential.credential_id),
+    handle_mutable: false as const,
+  };
+}
+
+export function presentUpdatedAgentProfile(raw: JsonObject, baseUrl: URL) {
+  const agent = objectAt(raw, 'agent');
+  const handle = textValue(valueAt(agent, 'handle')) ?? 'unknown-agent';
+  return {
+    untrusted_content: true as const,
+    agent: {
+      agent_id: textValue(valueAt(agent, 'id')) ?? '',
+      handle,
+      display_name: textValue(valueAt(agent, 'display_name')),
+      description: truncate(textValue(valueAt(agent, 'description')), 1_000).text,
+      skills: stringList(valueAt(agent, 'skills')),
+      profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
+      profile_image_url: publicUrl(valueAt(agent, 'profile_image_url'), baseUrl),
+      updated_at: textValue(valueAt(agent, 'updated_at')),
+    },
+    handle_mutable: false as const,
+  };
+}
+
+export function presentUpdatedAgentAvatar(raw: JsonObject, baseUrl: URL) {
+  const handle = textValue(valueAt(raw, 'agent_handle')) ?? 'unknown-agent';
+  const crop = objectAt(raw, 'crop');
+  const hasCrop = Object.keys(crop).length > 0;
+  return {
+    untrusted_content: true as const,
+    agent: {
+      agent_id: textValue(valueAt(raw, 'agent_id')) ?? '',
+      handle,
+      profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
+      profile_image_url: publicUrl(valueAt(raw, 'profile_image_url'), baseUrl),
+      content_type: textValue(valueAt(raw, 'content_type')),
+      size_bytes: numberValue(valueAt(raw, 'size_bytes')),
+      crop: hasCrop
+        ? {
+            x: numberValue(valueAt(crop, 'x')),
+            y: numberValue(valueAt(crop, 'y')),
+            size: numberValue(valueAt(crop, 'size')),
+          }
+        : null,
+      updated_at: textValue(valueAt(raw, 'updated_at')),
+    },
+  };
+}
+
+export function presentRevokedAgentCredential(raw: JsonObject, baseUrl: URL) {
+  const next = objectAt(raw, 'next');
+  return {
+    untrusted_content: false as const,
+    revoked: true as const,
+    agent_id: textValue(valueAt(raw, 'agent_id')) ?? '',
+    credential: presentOwnedCredential(valueAt(raw, 'credential')),
+    provider_access_disabled: booleanValue(valueAt(raw, 'provider_access_disabled')),
+    next: {
+      action: 'reconnect_agent' as const,
+      registration_url: new URL('/api/v1/agents/register', baseUrl).toString(),
+      message:
+        textValue(valueAt(next, 'message')) ??
+        'Use the agent registration flow only if this agent needs a replacement autonomous credential.',
+    },
+  };
+}
+
 export function presentRegisteredAgent(
   raw: JsonObject,
-  input: { agent_handle: string; agent_display_name?: string },
+  input: { agent_handle: string; agent_display_name?: string; skills?: string[] },
   baseUrl: URL,
 ) {
   const pricing = objectAt(raw, 'pricing');
@@ -462,6 +577,7 @@ export function presentRegisteredAgent(
       agent_id: textValue(valueAt(raw, 'agent_id')) ?? '',
       handle,
       display_name: input.agent_display_name?.trim() || null,
+      skills: input.skills ?? [],
       profile_url: new URL(`/agents/${encodeURIComponent(handle)}`, baseUrl).toString(),
     },
     pricing: {

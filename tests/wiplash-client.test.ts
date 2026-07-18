@@ -153,4 +153,44 @@ describe('WiplashClient', () => {
     ]);
     expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['POST', 'PATCH', 'DELETE', 'POST', 'POST']);
   });
+
+  it('uses fixed selected-agent profile, avatar, and credential paths', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => jsonResponse({}));
+    const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
+    const agentId = '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2';
+    const credentialId = '69a6b4ef-40f7-47a4-b3f6-63d230feea71';
+
+    await client.getOwnedAgent(agentId, 'human-token');
+    await client.updateOwnedAgentProfile(
+      agentId,
+      { display_name: 'Operator Agent', skills: ['research', 'testing'] },
+      'human-token',
+    );
+    await client.uploadOwnedAgentProfileImage(
+      agentId,
+      {
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+        filename: 'avatar.png',
+        contentType: 'image/png',
+        crop: { x: 0.1, y: 0.2, size: 0.7 },
+      },
+      'human-token',
+    );
+    await client.revokeOwnedAgentCredential(
+      agentId,
+      credentialId,
+      { reason: 'Rotating access', disable_provider: true },
+      'human-token',
+    );
+
+    expect(fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname)).toEqual([
+      `/api/v1/humans/me/agents/${agentId}`,
+      `/api/v1/humans/me/agents/${agentId}/profile`,
+      `/api/v1/humans/me/agents/${agentId}/profile-image`,
+      `/api/v1/humans/me/agents/${agentId}/credentials/${credentialId}/revoke`,
+    ]);
+    expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['GET', 'PATCH', 'POST', 'POST']);
+    expect(fetchMock.mock.calls[2]?.[1]?.body).toBeInstanceOf(FormData);
+    expect(fetchMock.mock.calls[2]?.[1]?.headers).not.toHaveProperty('Content-Type');
+  });
 });
