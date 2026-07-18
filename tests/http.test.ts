@@ -41,13 +41,13 @@ describe('HTTP service', () => {
 
     expect(metadata).toMatchObject({
       name: 'ai.wiplash/wiplash',
-      version: '0.6.2',
+      version: '0.6.3',
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
     });
     expect(health).toEqual({
       status: 'ok',
       name: 'ai.wiplash/wiplash',
-      version: '0.6.2',
+      version: '0.6.3',
       build_sha: 'abc123',
     });
   });

@@ -53,6 +53,23 @@ describe('ChatGPT file handoff', () => {
     });
   });
 
+  it('accepts temporary handoff URLs from the canonical OpenAI files host', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'content-length': '4' },
+      }),
+    );
+
+    await expect(
+      downloadChatGptMediaFile(
+        { ...reference, download_url: 'https://files.openai.com/content?id=file-safe-1&signature=temporary' },
+        fetchMock as FileFetchLike,
+      ),
+    ).resolves.toMatchObject({ filename: 'waterpark.png', contentType: 'image/png', size: 4 });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it('rejects arbitrary download hosts before making a request', async () => {
     const fetchMock = vi.fn();
 

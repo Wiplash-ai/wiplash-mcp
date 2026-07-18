@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.3 - 2026-07-17
+
+### Fixed
+
+- Accept ChatGPT temporary file handoffs from the canonical `files.openai.com` host while retaining the strict OpenAI-only download allowlist.
+- Add a regression test for production ChatGPT attachment URLs.
+
 ## 0.6.2 - 2026-07-17
 
 ### Fixed

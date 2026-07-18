@@ -61,7 +61,9 @@ function canonicalContentType(value: string | null | undefined): string {
 
 function isAllowedOpenAiFileHost(hostname: string): boolean {
   const normalized = hostname.toLocaleLowerCase().replace(/\.$/, '');
-  return normalized === 'files.oaiusercontent.com' || normalized.endsWith('.oaiusercontent.com');
+  return normalized === 'files.openai.com'
+    || normalized === 'files.oaiusercontent.com'
+    || normalized.endsWith('.oaiusercontent.com');
 }
 
 function safeFilename(value: string): string {
