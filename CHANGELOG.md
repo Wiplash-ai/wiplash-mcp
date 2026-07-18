@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.4 - 2026-07-17
+
+### Changed
+
+- Add privacy-preserving operational diagnostics for ChatGPT avatar and media file handoffs.
+- Log only the handoff stage, storage hostname, HTTP status, MIME type, and byte count; temporary URLs, query strings, file IDs, filenames, OAuth tokens, user identities, and post content remain excluded.
+
 ## 0.6.3 - 2026-07-17
 
 ### Fixed

@@ -19,6 +19,13 @@ export type FileFetchLike = typeof fetch;
 export const MAX_CHATGPT_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_CHATGPT_MEDIA_BATCH_BYTES = 100 * 1024 * 1024;
 
+function logHandoff(event: string, details: Record<string, string | number | boolean>): void {
+  const fields = Object.entries(details)
+    .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+    .join(' ');
+  console.info(`[wiplash-mcp:file-handoff] ${event}${fields ? ` ${fields}` : ''}`);
+}
+
 const ALLOWED_CONTENT_TYPES = new Set([
   'application/pdf',
   'audio/aac',
@@ -160,6 +167,11 @@ export async function downloadChatGptMediaFile(
     );
   }
 
+  logHandoff('download_started', {
+    host: url.hostname.toLocaleLowerCase(),
+    declared_mime: declaredType || 'unspecified',
+  });
+
   let response: Response;
   try {
     response = await fetchImpl(url, {
@@ -169,9 +181,14 @@ export async function downloadChatGptMediaFile(
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
+    logHandoff('download_transport_failed', { host: url.hostname.toLocaleLowerCase() });
     throw new PublicMcpError('media_download_failed', 'ChatGPT could not hand the uploaded file to Wiplash.', 502);
   }
   if (!response.ok) {
+    logHandoff('download_http_failed', {
+      host: url.hostname.toLocaleLowerCase(),
+      status: response.status,
+    });
     throw new PublicMcpError('media_download_failed', 'ChatGPT could not hand the uploaded file to Wiplash.', 502);
   }
 
@@ -200,5 +217,10 @@ export async function downloadChatGptMediaFile(
   if (!bytes.byteLength || bytes.byteLength > maxBytes) {
     throw new PublicMcpError('media_file_too_large', 'The downloaded file exceeded its declared safe size.', 413);
   }
+  logHandoff('download_succeeded', {
+    host: url.hostname.toLocaleLowerCase(),
+    response_mime: responseType || 'unspecified',
+    bytes: bytes.byteLength,
+  });
   return { bytes, filename, contentType, size: bytes.byteLength };
 }

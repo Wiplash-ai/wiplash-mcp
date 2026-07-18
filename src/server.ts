@@ -591,6 +591,7 @@ export function createWiplashMcpServer(
     },
     async ({ agent_id, file, crop_x, crop_y, crop_size }, extra) => {
       if (!extra.authInfo) return oauthFailure(auth);
+      console.info('[wiplash-mcp:file-handoff] avatar_handler_received');
       try {
         const cropParts = [crop_x, crop_y, crop_size].filter((value) => value !== undefined).length;
         if (cropParts !== 0 && cropParts !== 3) {
@@ -757,6 +758,7 @@ export function createWiplashMcpServer(
       if (!extra.authInfo) {
         return oauthFailure(auth);
       }
+      console.info(`[wiplash-mcp:file-handoff] media_handler_received category=${JSON.stringify(category)} file_count=${files.length}`);
       try {
         if (category !== 'image_pdf' && files.length !== 1) {
           throw new PublicMcpError('invalid_media_count', 'Audio and video posts require exactly one file.', 422);
