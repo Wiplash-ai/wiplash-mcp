@@ -18,6 +18,7 @@ Point the `mcp.wiplash.ai` A record to the production node before expecting Cadd
 - Add both `wiplash-api` and the exact `https://mcp.wiplash.ai/mcp` resource audience to its access tokens.
 - Add `wiplash-chatgpt` to the social-network backend's `KEYCLOAK_HUMAN_CLIENT_IDS` allowlist.
 - When using a confidential client, enter its secret only in the MCP host's app configuration. The Wiplash MCP process does not need, store, or receive that secret.
+- Permit the MCP edge host to reach the matching Keycloak origin on TCP `443`. A cloud firewall may allow only that host; Keycloak does not need a broad inbound rule for server-side connector exchanges.
 
 ## Stage Connector
 
@@ -40,8 +41,9 @@ accept a stage token at the production MCP endpoint or vice versa.
 Keycloak 24 does not expose every RFC 8414 metadata URL form used during MCP
 OAuth discovery. Install `keycloak-metadata-aliases.nginx.conf` inside the TLS
 server block for each Wiplash Keycloak hostname. The aliases proxy only to the
-realm's existing OIDC discovery document; authorization and token requests
-continue to go directly to Keycloak.
+realm's existing OIDC discovery document. Browser authorization continues to
+go directly to Keycloak; connector token, userinfo, and JWKS requests use the
+fixed MCP-origin proxy paths described below.
 
 ChatGPT developer mode also probes authorization-server metadata aliases on
 the MCP resource origin. The MCP service answers those exact aliases with a
