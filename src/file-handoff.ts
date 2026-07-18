@@ -3,8 +3,8 @@ import { PublicMcpError } from './errors.js';
 export interface ChatGptFileReference {
   file_id: string;
   download_url: string;
-  file_name: string;
-  mime_type: string;
+  file_name?: string;
+  mime_type?: string;
 }
 
 export interface DownloadedMediaFile {
@@ -72,6 +72,30 @@ function safeFilename(value: string): string {
   return normalized;
 }
 
+function fallbackFilename(fileId: string, contentType: string): string {
+  const extensionByType: Record<string, string> = {
+    'application/pdf': 'pdf',
+    'audio/aac': 'aac',
+    'audio/flac': 'flac',
+    'audio/mp4': 'm4a',
+    'audio/mpeg': 'mp3',
+    'audio/ogg': 'ogg',
+    'audio/wav': 'wav',
+    'audio/webm': 'webm',
+    'image/gif': 'gif',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'video/mp4': 'mp4',
+    'video/quicktime': 'mov',
+    'video/webm': 'webm',
+    'video/x-matroska': 'mkv',
+  };
+  const extension = extensionByType[canonicalContentType(contentType)] ?? 'bin';
+  const safeId = fileId.replace(/[^A-Za-z0-9_-]/g, '').slice(-64) || 'file';
+  return `chatgpt-${safeId}.${extension}`;
+}
+
 export function mediaTypeForContentType(contentType: string): 'image' | 'document' | 'audio' | 'video' {
   const normalized = normalizedContentType(contentType);
   if (normalized.startsWith('image/')) return 'image';
@@ -109,11 +133,10 @@ export async function downloadChatGptMediaFile(
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0 || maxBytes > MAX_CHATGPT_FILE_BYTES) {
     throw new TypeError('maxBytes must be a positive safe integer within the global file limit.');
   }
-  const contentType = normalizedContentType(reference.mime_type);
-  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+  const declaredType = normalizedContentType(reference.mime_type);
+  if (declaredType && !ALLOWED_CONTENT_TYPES.has(declaredType)) {
     throw new PublicMcpError('unsupported_media_type', 'Use a supported image, PDF, audio, or video file.', 422);
   }
-  const filename = safeFilename(reference.file_name);
 
   let url: URL;
   try {
@@ -139,7 +162,7 @@ export async function downloadChatGptMediaFile(
   try {
     response = await fetchImpl(url, {
       method: 'GET',
-      headers: { Accept: contentType },
+      headers: { Accept: declaredType || '*/*' },
       redirect: 'error',
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -156,12 +179,20 @@ export async function downloadChatGptMediaFile(
   }
   const responseType = normalizedContentType(response.headers.get('content-type'));
   if (
+    declaredType &&
     responseType &&
     responseType !== 'application/octet-stream' &&
-    canonicalContentType(responseType) !== canonicalContentType(contentType)
+    canonicalContentType(responseType) !== canonicalContentType(declaredType)
   ) {
     throw new PublicMcpError('media_type_mismatch', 'The downloaded file type did not match the uploaded file.', 422);
   }
+  const contentType = declaredType || (responseType === 'application/octet-stream' ? '' : responseType);
+  if (!contentType || !ALLOWED_CONTENT_TYPES.has(contentType)) {
+    throw new PublicMcpError('unsupported_media_type', 'Use a supported image, PDF, audio, or video file.', 422);
+  }
+  const filename = reference.file_name
+    ? safeFilename(reference.file_name)
+    : fallbackFilename(reference.file_id, contentType);
 
   const bytes = await response.arrayBuffer();
   if (!bytes.byteLength || bytes.byteLength > maxBytes) {

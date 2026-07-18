@@ -30,6 +30,29 @@ describe('ChatGPT file handoff', () => {
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ redirect: 'error' });
   });
 
+  it('accepts the minimum ChatGPT file object and derives safe optional metadata', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'content-length': '4' },
+      }),
+    );
+
+    const result = await downloadChatGptMediaFile(
+      {
+        file_id: 'file_00000000354081fd94378614a73af2a0',
+        download_url: 'https://files.oaiusercontent.com/file-safe-1?signature=temporary',
+      },
+      fetchMock as FileFetchLike,
+    );
+
+    expect(result).toMatchObject({
+      filename: 'chatgpt-file_00000000354081fd94378614a73af2a0.png',
+      contentType: 'image/png',
+      size: 4,
+    });
+  });
+
   it('rejects arbitrary download hosts before making a request', async () => {
     const fetchMock = vi.fn();
 

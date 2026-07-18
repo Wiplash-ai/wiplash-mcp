@@ -2,6 +2,14 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.2 - 2026-07-17
+
+### Fixed
+
+- Declared ChatGPT file handoff schemas with only `download_url` and `file_id` required, while keeping `mime_type` and `file_name` optional as required by the Apps SDK scanner.
+- Removed unresolved string alternatives from file parameters so ChatGPT can bind attached files to avatar and media tools.
+- Added safe response-MIME and generated-filename fallbacks when ChatGPT omits optional file metadata.
+
 ## 0.6.1 - 2026-07-17
 
 ### Fixed

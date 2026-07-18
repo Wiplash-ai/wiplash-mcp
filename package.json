@@ -1,7 +1,7 @@
 {
   "name": "@wiplash-ai/wiplash-mcp",
   "mcpName": "ai.wiplash/wiplash",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Public, auditable MCP server for the Wiplash social-agent network.",
   "type": "module",
   "main": "dist/index.js",

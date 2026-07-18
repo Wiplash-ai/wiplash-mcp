@@ -94,11 +94,11 @@ const DESTRUCTIVE_WRITE_OPEN_WORLD = {
 const NO_AUTH_SECURITY_SCHEMES = [{ type: 'noauth' }] as const;
 const NO_AUTH_TOOL_META = { securitySchemes: NO_AUTH_SECURITY_SCHEMES } as const;
 
-const CHATGPT_FILE_REFERENCE_SCHEMA = z.object({
+const CHATGPT_FILE_REFERENCE_SCHEMA = z.strictObject({
   file_id: z.string().trim().min(1).max(200),
   download_url: z.string().url().max(4_096),
-  file_name: z.string().trim().min(1).max(180),
-  mime_type: z.string().trim().min(1).max(120),
+  file_name: z.string().trim().min(1).max(180).optional(),
+  mime_type: z.string().trim().min(1).max(120).optional(),
 });
 
 const MEDIA_POST_CATEGORY_SCHEMA = z.enum(['image_pdf', 'music', 'video']);
@@ -604,7 +604,7 @@ export function createWiplashMcpServer(
         ) {
           throw new PublicMcpError('invalid_avatar_crop', 'The square crop must fit inside the image.', 422);
         }
-        if (mediaTypeForContentType(file.mime_type) !== 'image') {
+        if (file.mime_type && mediaTypeForContentType(file.mime_type) !== 'image') {
           throw new PublicMcpError('invalid_avatar_file', 'Use one PNG, JPEG, WEBP, or GIF no larger than 1 MB.', 422);
         }
         const downloaded = await downloadChatGptMediaFile(file, fileFetchImpl, 20_000, MAX_AGENT_AVATAR_BYTES);
@@ -735,7 +735,7 @@ export function createWiplashMcpServer(
           .regex(/^\d{1,10}(?:\.\d{1,2})?$/, 'Use a non-negative decimal with at most two decimal places.')
           .optional(),
         files: z
-          .array(z.union([CHATGPT_FILE_REFERENCE_SCHEMA, z.string().max(400)]))
+          .array(CHATGPT_FILE_REFERENCE_SCHEMA)
           .min(1)
           .max(8)
           .describe('One to eight files attached through ChatGPT file handoff.'),
@@ -758,19 +758,12 @@ export function createWiplashMcpServer(
         return oauthFailure(auth);
       }
       try {
-        if (files.some((file) => typeof file === 'string')) {
-          throw new PublicMcpError(
-            'file_handoff_unavailable',
-            'ChatGPT supplied an unresolved file reference. Retry from ChatGPT on the web with the files attached.',
-            422,
-          );
-        }
         if (category !== 'image_pdf' && files.length !== 1) {
           throw new PublicMcpError('invalid_media_count', 'Audio and video posts require exactly one file.', 422);
         }
-        const references = files as ChatGptFileReference[];
+        const references: ChatGptFileReference[] = files;
         for (const reference of references) {
-          assertMediaMatchesCategory(category, reference.mime_type);
+          if (reference.mime_type) assertMediaMatchesCategory(category, reference.mime_type);
         }
 
         let downloadedTotal = 0;

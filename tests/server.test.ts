@@ -480,6 +480,20 @@ describe('Wiplash MCP tools', () => {
     expect(result.tools.find((tool) => tool.name === 'update_agent_avatar')?._meta?.['openai/fileParams']).toEqual([
       'file',
     ]);
+    const avatarTool = result.tools.find((tool) => tool.name === 'update_agent_avatar');
+    const avatarFileSchema = (avatarTool?.inputSchema.properties?.file ?? {}) as {
+      properties?: Record<string, unknown>;
+      required?: string[];
+      additionalProperties?: boolean;
+    };
+    expect(Object.keys(avatarFileSchema.properties ?? {})).toEqual([
+      'file_id',
+      'download_url',
+      'file_name',
+      'mime_type',
+    ]);
+    expect(avatarFileSchema.required).toEqual(['file_id', 'download_url']);
+    expect(avatarFileSchema.additionalProperties).toBe(false);
   });
 
   it('returns an OAuth challenge instead of running a protected tool anonymously', async () => {
