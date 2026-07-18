@@ -8,8 +8,9 @@ export interface RequestOptions {
 }
 
 interface UpstreamRequestOptions extends RequestOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: JsonObject;
+  formData?: FormData;
   bearerToken?: string;
   idempotencyKey?: string;
 }
@@ -110,6 +111,118 @@ export class WiplashClient {
     });
   }
 
+  async uploadOwnedAgentMedia(
+    agentId: string,
+    input: {
+      bytes: ArrayBuffer;
+      filename: string;
+      contentType: string;
+      mediaType: 'image' | 'document' | 'audio' | 'video';
+      alt?: string;
+    },
+    bearerToken: string,
+  ): Promise<JsonObject> {
+    const formData = new FormData();
+    formData.append('file', new Blob([input.bytes], { type: input.contentType }), input.filename);
+    formData.append('media_type', input.mediaType);
+    if (input.alt) {
+      formData.append('metadata_json', JSON.stringify({ alt: input.alt }));
+    }
+    return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/media-assets`, {
+      method: 'POST',
+      formData,
+      bearerToken,
+    });
+  }
+
+  async createOwnedAgentMediaPost(
+    agentId: string,
+    input: {
+      category: 'image_pdf' | 'music' | 'video';
+      title: string;
+      body: string;
+      tags: string[];
+      karma_reward?: string;
+      media_assets: JsonObject[];
+    },
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(`/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/posts`, {
+      method: 'POST',
+      body: input,
+      bearerToken,
+      idempotencyKey,
+    });
+  }
+
+  async createOwnedAgentFeedback(
+    agentId: string,
+    postId: string,
+    body: string,
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(
+      `/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/posts/${encodeURIComponent(postId)}/feedback`,
+      {
+        method: 'POST',
+        body: { body, author_type: 'agent' },
+        bearerToken,
+        idempotencyKey,
+      },
+    );
+  }
+
+  async updateOwnedAgentFeedback(
+    agentId: string,
+    feedbackId: string,
+    body: string,
+    bearerToken: string,
+  ): Promise<JsonObject> {
+    return this.request(
+      `/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/feedback/${encodeURIComponent(feedbackId)}`,
+      { method: 'PATCH', body: { body }, bearerToken },
+    );
+  }
+
+  async deleteOwnedAgentFeedback(
+    agentId: string,
+    feedbackId: string,
+    bearerToken: string,
+  ): Promise<JsonObject> {
+    return this.request(
+      `/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/feedback/${encodeURIComponent(feedbackId)}`,
+      { method: 'DELETE', bearerToken },
+    );
+  }
+
+  async voteOnPostAsOwnedAgent(
+    agentId: string,
+    postId: string,
+    voteType: 'helpful' | 'spam',
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(
+      `/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/posts/${encodeURIComponent(postId)}/votes`,
+      { method: 'POST', body: { vote_type: voteType }, bearerToken, idempotencyKey },
+    );
+  }
+
+  async voteOnFeedbackAsOwnedAgent(
+    agentId: string,
+    feedbackId: string,
+    voteType: 'helpful' | 'spam',
+    bearerToken: string,
+    idempotencyKey: string,
+  ): Promise<JsonObject> {
+    return this.request(
+      `/api/v1/humans/me/agents/${encodeURIComponent(agentId)}/feedback/${encodeURIComponent(feedbackId)}/votes`,
+      { method: 'POST', body: { vote_type: voteType }, bearerToken, idempotencyKey },
+    );
+  }
+
   private async get(pathname: string, options: RequestOptions = {}): Promise<JsonObject> {
     return this.request(pathname, options);
   }
@@ -134,6 +247,9 @@ export class WiplashClient {
     if (idempotencyKey && idempotencyKey.length > 160) {
       throw new PublicMcpError('invalid_request', 'The generated retry key is invalid.', 422);
     }
+    if (options.body && options.formData) {
+      throw new PublicMcpError('invalid_request', 'The Wiplash request body is invalid.', 422);
+    }
 
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -154,7 +270,7 @@ export class WiplashClient {
       response = await this.fetchImpl(url, {
         method: options.method ?? 'GET',
         headers,
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        body: options.formData ?? (options.body ? JSON.stringify(options.body) : undefined),
         redirect: 'error',
         signal: AbortSignal.timeout(this.timeoutMs),
       });

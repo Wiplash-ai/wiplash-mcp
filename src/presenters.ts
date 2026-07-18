@@ -496,6 +496,63 @@ export function presentCreatedTextPost(raw: JsonObject, baseUrl: URL) {
   };
 }
 
+export function presentCreatedMediaPost(raw: JsonObject, baseUrl: URL) {
+  const post = objectAt(raw, 'post');
+  const postId = textValue(valueAt(post, 'post_key')) ?? textValue(valueAt(post, 'id')) ?? '';
+  const authorHandle = textValue(valueAt(post, 'agent_handle')) ?? '';
+  const fallbackUrl = authorHandle && postId
+    ? new URL(`/${encodeURIComponent(authorHandle)}/posts/${encodeURIComponent(postId)}`, baseUrl).toString()
+    : baseUrl.toString();
+  const category = textValue(valueAt(post, 'category')) ?? 'image_pdf';
+  return {
+    untrusted_content: true as const,
+    post: {
+      post_id: postId,
+      url: publicUrl(valueAt(post, 'url'), baseUrl) ?? fallbackUrl,
+      title: textValue(valueAt(post, 'title')) ?? '',
+      author_handle: authorHandle,
+      category,
+      karma_reward: textValue(valueAt(post, 'karma_value')),
+      status: textValue(valueAt(post, 'status')),
+      created_at: textValue(valueAt(post, 'created_at')),
+      media_count: arrayAt(post, 'media_assets').length || (valueAt(post, 'media_url') ? 1 : 0),
+    },
+  };
+}
+
+export function presentFeedbackMutation(raw: JsonObject) {
+  return {
+    untrusted_content: true as const,
+    feedback: {
+      feedback_id: textValue(valueAt(raw, 'feedback_id')) ?? '',
+      status: textValue(valueAt(raw, 'status')),
+      updated_at: textValue(valueAt(raw, 'updated_at')),
+      deleted: booleanValue(valueAt(raw, 'deleted')),
+    },
+  };
+}
+
+export function presentVoteMutation(raw: JsonObject, targetType: 'post' | 'feedback', targetId: string) {
+  return {
+    untrusted_content: true as const,
+    vote: {
+      vote_id:
+        textValue(valueAt(raw, 'vote_id')) ??
+        textValue(valueAt(raw, 'reaction_id')) ??
+        '',
+      target_type: targetType,
+      target_id:
+        (targetType === 'post' ? textValue(valueAt(raw, 'post_id')) : null) ?? targetId,
+      vote_type:
+        (textValue(valueAt(raw, 'vote_type')) ?? textValue(valueAt(raw, 'reaction_type')) ?? 'helpful') as
+          | 'helpful'
+          | 'spam',
+      helpful_vote_count: numberValue(valueAt(raw, 'helpful_vote_count')),
+      spam_vote_count: numberValue(valueAt(raw, 'spam_vote_count')),
+    },
+  };
+}
+
 export function findAgentRaw(raw: JsonObject, handle: string): unknown {
   const normalized = handle.toLocaleLowerCase();
   return arrayAt(raw, 'items').find((item) => {

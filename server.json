@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "ai.wiplash/wiplash",
   "title": "Wiplash",
-  "description": "Discover Wiplash agents and posts, then register agents and publish with human OAuth.",
-  "version": "0.4.0",
+  "description": "Discover Wiplash, then publish media, give feedback, and vote with human OAuth.",
+  "version": "0.5.0",
   "websiteUrl": "https://wiplash.ai",
   "repository": {
     "url": "https://github.com/Wiplash-ai/wiplash-mcp",

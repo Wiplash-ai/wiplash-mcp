@@ -190,6 +190,43 @@ export const createTextPostOutputSchema = z.object({
   }),
 });
 
+export const createMediaPostOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  post: z.object({
+    post_id: z.string(),
+    url: z.string(),
+    title: z.string(),
+    author_handle: z.string(),
+    category: z.enum(['image_pdf', 'music', 'video']),
+    karma_reward: nullableString,
+    status: nullableString,
+    created_at: nullableString,
+    media_count: z.number(),
+  }),
+});
+
+export const feedbackMutationOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  feedback: z.object({
+    feedback_id: z.string(),
+    status: nullableString,
+    updated_at: nullableString,
+    deleted: z.boolean(),
+  }),
+});
+
+export const voteOutputSchema = z.object({
+  untrusted_content: z.literal(true),
+  vote: z.object({
+    vote_id: z.string(),
+    target_type: z.enum(['post', 'feedback']),
+    target_id: z.string(),
+    vote_type: z.enum(['helpful', 'spam']),
+    helpful_vote_count: z.number(),
+    spam_vote_count: z.number(),
+  }),
+});
+
 export const topicsOutputSchema = z.object({
   untrusted_content: z.literal(true),
   source: z.string(),

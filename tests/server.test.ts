@@ -4,6 +4,7 @@ import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { COMPONENT_MEDIA_META_KEY } from '../src/component-media.js';
+import type { FileFetchLike } from '../src/file-handoff.js';
 import { createWiplashMcpServer } from '../src/server.js';
 import { WiplashClient, type FetchLike } from '../src/wiplash-client.js';
 
@@ -87,6 +88,7 @@ describe('Wiplash MCP tools', () => {
   let mcpServer: ReturnType<typeof createWiplashMcpServer>;
   let clientTransport: InMemoryTransport;
   let fetchMock: ReturnType<typeof vi.fn>;
+  let fileFetchMock: ReturnType<typeof vi.fn>;
 
   const authInfo: AuthInfo = {
     token: 'signed.test.token',
@@ -103,6 +105,12 @@ describe('Wiplash MCP tools', () => {
   }
 
   beforeEach(async () => {
+    fileFetchMock = vi.fn(async () =>
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'content-length': '4' },
+      }),
+    );
     fetchMock = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = new URL(String(input));
       if (url.pathname === '/api/v1/search/posts') {
@@ -170,6 +178,7 @@ describe('Wiplash MCP tools', () => {
         });
       }
       if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/posts$/.test(url.pathname) && init?.method === 'POST') {
+        const requestBody = JSON.parse(String(init.body)) as { category?: string; media_assets?: unknown[] };
         return jsonResponse({
           post: {
             id: '6b21525e-5111-4429-a76d-47075269087f',
@@ -177,11 +186,49 @@ describe('Wiplash MCP tools', () => {
             url: 'https://wiplash.ai/operator-agent/posts/created-post-key',
             title: 'A confirmed update',
             agent_handle: 'operator-agent',
-            category: 'text_post',
+            category: requestBody.category ?? 'text_post',
+            media_assets: requestBody.media_assets ?? [],
             karma_value: '2.00',
             status: 'feedback_open',
             created_at: '2026-07-17T14:00:00Z',
           },
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/media-assets$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          media_asset: {
+            media_type: 'image',
+            provider_asset_id: 'asset-1',
+            url: '/api/v1/posts/media/asset-1',
+            content_type: 'image/png',
+            size_bytes: 4,
+          },
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/posts\/[^/]+\/feedback$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({ feedback_id: '69a6b4ef-40f7-47a4-b3f6-63d230feea71', status: 'active' });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/feedback\/[^/]+$/.test(url.pathname) && init?.method === 'PATCH') {
+        return jsonResponse({ feedback_id: '69a6b4ef-40f7-47a4-b3f6-63d230feea71', updated_at: '2026-07-17T15:00:00Z' });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/feedback\/[^/]+$/.test(url.pathname) && init?.method === 'DELETE') {
+        return jsonResponse({ feedback_id: '69a6b4ef-40f7-47a4-b3f6-63d230feea71', deleted: true, updated_at: '2026-07-17T15:01:00Z' });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/posts\/[^/]+\/votes$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          vote_id: 'vote-post-1',
+          post_id: 'post-uuid',
+          vote_type: 'helpful',
+          helpful_vote_count: 3,
+          spam_vote_count: 0,
+        });
+      }
+      if (/^\/api\/v1\/humans\/me\/agents\/[^/]+\/feedback\/[^/]+\/votes$/.test(url.pathname) && init?.method === 'POST') {
+        return jsonResponse({
+          vote_id: 'vote-feedback-1',
+          vote_type: 'spam',
+          helpful_vote_count: 2,
+          spam_vote_count: 1,
         });
       }
       if (url.pathname === '/api/v1/agents') {
@@ -250,7 +297,7 @@ describe('Wiplash MCP tools', () => {
     });
 
     const apiClient = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
-    mcpServer = createWiplashMcpServer(apiClient);
+    mcpServer = createWiplashMcpServer(apiClient, undefined, fileFetchMock as FileFetchLike);
     mcpClient = new Client({ name: 'wiplash-mcp-tests', version: '1.0.0' });
     const linkedTransports = InMemoryTransport.createLinkedPair();
     clientTransport = linkedTransports[0];
@@ -264,7 +311,7 @@ describe('Wiplash MCP tools', () => {
     await mcpServer.close();
   });
 
-  it('advertises public discovery plus three OAuth-protected operator tools', async () => {
+  it('advertises public discovery plus OAuth-protected operator tools', async () => {
     const result = await mcpClient.listTools();
     expect(result.tools.map((tool) => tool.name)).toEqual([
       'search_posts',
@@ -278,15 +325,30 @@ describe('Wiplash MCP tools', () => {
       'list_my_agents',
       'register_agent',
       'create_text_post',
+      'create_media_post',
+      'create_feedback',
+      'update_feedback',
+      'delete_feedback',
+      'vote_post',
+      'vote_feedback',
     ]);
     for (const tool of result.tools.slice(0, 9)) {
       expect(tool.annotations?.readOnlyHint).toBe(true);
       expect(tool.annotations?.destructiveHint).toBe(false);
     }
-    for (const toolName of ['register_agent', 'create_text_post']) {
+    for (const toolName of [
+      'register_agent',
+      'create_text_post',
+      'create_media_post',
+      'create_feedback',
+      'update_feedback',
+      'delete_feedback',
+      'vote_post',
+      'vote_feedback',
+    ]) {
       const tool = result.tools.find((candidate) => candidate.name === toolName);
       expect(tool?.annotations?.readOnlyHint).toBe(false);
-      expect(tool?.annotations?.destructiveHint).toBe(false);
+      expect(tool?.annotations?.destructiveHint).toBe(toolName === 'delete_feedback');
     }
     for (const tool of result.tools.slice(0, 8)) {
       expect(tool._meta?.securitySchemes).toEqual([{ type: 'noauth' }]);
@@ -307,6 +369,9 @@ describe('Wiplash MCP tools', () => {
         'openai/outputTemplate': 'ui://wiplash/post-deck.html',
       });
     }
+    expect(result.tools.find((tool) => tool.name === 'create_media_post')?._meta?.['openai/fileParams']).toEqual([
+      'files',
+    ]);
   });
 
   it('returns an OAuth challenge instead of running a protected tool anonymously', async () => {
@@ -382,6 +447,88 @@ describe('Wiplash MCP tools', () => {
       });
       expect((init?.headers as Record<string, string>)['Idempotency-Key']).toMatch(/^mcp-[a-f0-9]{64}$/);
     }
+  });
+
+  it('publishes handed-off media and performs confirmed feedback and vote actions as one owned agent', async () => {
+    authorizeClient();
+    const agentId = '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2';
+    const feedbackId = '69a6b4ef-40f7-47a4-b3f6-63d230feea71';
+    const media = await mcpClient.callTool({
+      name: 'create_media_post',
+      arguments: {
+        agent_id: agentId,
+        category: 'image_pdf',
+        title: 'A confirmed image',
+        body: 'A safe image handoff test.',
+        tags: ['media'],
+        files: [
+          {
+            file_id: 'file-safe-1',
+            download_url: 'https://files.oaiusercontent.com/file-safe-1?signature=temporary',
+            name: 'waterpark.png',
+            mime_type: 'image/png',
+            size: 4,
+          },
+        ],
+        alt_texts: ['A Wiplash waterpark illustration.'],
+        confirmed: true,
+      },
+    });
+    const createdFeedback = await mcpClient.callTool({
+      name: 'create_feedback',
+      arguments: { agent_id: agentId, post_id: 'post-uuid', body: 'Specific useful feedback.', confirmed: true },
+    });
+    const updatedFeedback = await mcpClient.callTool({
+      name: 'update_feedback',
+      arguments: { agent_id: agentId, feedback_id: feedbackId, body: 'A clearer replacement.', confirmed: true },
+    });
+    const postVote = await mcpClient.callTool({
+      name: 'vote_post',
+      arguments: { agent_id: agentId, post_id: 'post-uuid', vote_type: 'helpful', confirmed: true },
+    });
+    const feedbackVote = await mcpClient.callTool({
+      name: 'vote_feedback',
+      arguments: { agent_id: agentId, feedback_id: feedbackId, vote_type: 'spam', confirmed: true },
+    });
+    const deletedFeedback = await mcpClient.callTool({
+      name: 'delete_feedback',
+      arguments: { agent_id: agentId, feedback_id: feedbackId, confirmed: true },
+    });
+
+    expect(media.structuredContent).toMatchObject({
+      post: { author_handle: 'operator-agent', category: 'image_pdf', media_count: 1 },
+    });
+    expect(createdFeedback.structuredContent).toMatchObject({ feedback: { feedback_id: feedbackId, deleted: false } });
+    expect(updatedFeedback.structuredContent).toMatchObject({ feedback: { feedback_id: feedbackId } });
+    expect(postVote.structuredContent).toMatchObject({ vote: { target_type: 'post', vote_type: 'helpful' } });
+    expect(feedbackVote.structuredContent).toMatchObject({ vote: { target_type: 'feedback', vote_type: 'spam' } });
+    expect(deletedFeedback.structuredContent).toMatchObject({ feedback: { feedback_id: feedbackId, deleted: true } });
+    expect(fileFetchMock).toHaveBeenCalledOnce();
+
+    const uploadCall = fetchMock.mock.calls.find(([input]) =>
+      new URL(String(input)).pathname.endsWith('/media-assets'),
+    );
+    expect(uploadCall?.[1]?.body).toBeInstanceOf(FormData);
+    expect(uploadCall?.[1]?.headers).not.toHaveProperty('Content-Type');
+    const selectedAgentCalls = fetchMock.mock.calls.filter(([input]) =>
+      new URL(String(input)).pathname.includes(`/humans/me/agents/${agentId}/`),
+    );
+    expect(selectedAgentCalls).toHaveLength(7);
+  });
+
+  it('does not run a mutation without the literal confirmation field', async () => {
+    authorizeClient();
+    const result = await mcpClient.callTool({
+      name: 'vote_post',
+      arguments: {
+        agent_id: '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+        post_id: 'post-uuid',
+        vote_type: 'helpful',
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('returns filtered, explicitly untrusted post search results', async () => {

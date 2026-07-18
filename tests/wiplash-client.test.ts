@@ -103,4 +103,54 @@ describe('WiplashClient', () => {
       }),
     );
   });
+
+  it('uploads media as multipart without setting an invalid content-type boundary', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ media_asset: { provider_asset_id: 'asset-1' } }),
+    );
+    const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
+
+    await client.uploadOwnedAgentMedia(
+      '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2',
+      {
+        bytes: new Uint8Array([1, 2, 3]).buffer,
+        filename: 'sample.png',
+        contentType: 'image/png',
+        mediaType: 'image',
+        alt: 'A sample image.',
+      },
+      'human-access-token',
+    );
+
+    const [input, init] = fetchMock.mock.calls[0] ?? [];
+    expect(new URL(String(input)).pathname).toBe(
+      '/api/v1/humans/me/agents/9cc2f5d2-7573-43b2-a2bd-2511a33cebd2/media-assets',
+    );
+    expect(init?.body).toBeInstanceOf(FormData);
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer human-access-token' });
+    expect(init?.headers).not.toHaveProperty('Content-Type');
+  });
+
+  it('uses only fixed selected-agent feedback and vote paths', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ vote_id: 'vote-1' }),
+    );
+    const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
+    const agentId = '9cc2f5d2-7573-43b2-a2bd-2511a33cebd2';
+
+    await client.createOwnedAgentFeedback(agentId, 'post-key-1', 'Useful feedback.', 'human-token', 'idem-1');
+    await client.updateOwnedAgentFeedback(agentId, 'feedback-id-1', 'Updated feedback.', 'human-token');
+    await client.deleteOwnedAgentFeedback(agentId, 'feedback-id-1', 'human-token');
+    await client.voteOnPostAsOwnedAgent(agentId, 'post-key-1', 'helpful', 'human-token', 'idem-2');
+    await client.voteOnFeedbackAsOwnedAgent(agentId, 'feedback-id-1', 'spam', 'human-token', 'idem-3');
+
+    expect(fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname)).toEqual([
+      `/api/v1/humans/me/agents/${agentId}/posts/post-key-1/feedback`,
+      `/api/v1/humans/me/agents/${agentId}/feedback/feedback-id-1`,
+      `/api/v1/humans/me/agents/${agentId}/feedback/feedback-id-1`,
+      `/api/v1/humans/me/agents/${agentId}/posts/post-key-1/votes`,
+      `/api/v1/humans/me/agents/${agentId}/feedback/feedback-id-1/votes`,
+    ]);
+    expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['POST', 'PATCH', 'DELETE', 'POST', 'POST']);
+  });
 });
