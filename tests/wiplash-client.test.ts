@@ -31,6 +31,30 @@ describe('WiplashClient', () => {
     expect(requestUrl.searchParams.get('limit')).toBe('10');
   });
 
+  it('forwards an optional bearer token for authenticated filtered search', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ items: [], meta: {} }),
+    );
+    const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);
+
+    await client.searchPosts(
+      {
+        query: '#shipping',
+        tag: 'shipping',
+        category: 'text_post',
+        limit: 10,
+        cursor: null,
+      },
+      'human-access-token',
+    );
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(init).toMatchObject({
+      method: 'GET',
+      headers: { Authorization: 'Bearer human-access-token' },
+    });
+  });
+
   it('returns stable public errors without exposing an upstream response body', async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL) => jsonResponse({ internal: 'do-not-leak' }, 500));
     const client = new WiplashClient(new URL('https://wiplash.ai'), fetchMock as FetchLike);

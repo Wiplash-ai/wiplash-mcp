@@ -30,14 +30,17 @@ export class WiplashClient {
     this.timeoutMs = timeoutMs;
   }
 
-  async searchPosts(input: {
-    query: string;
-    tag: string | null;
-    category: string | null;
-    limit: number;
-    cursor: string | null;
-  }): Promise<JsonObject> {
-    return this.get('/api/v1/search/posts', {
+  async searchPosts(
+    input: {
+      query: string;
+      tag: string | null;
+      category: string | null;
+      limit: number;
+      cursor: string | null;
+    },
+    bearerToken?: string,
+  ): Promise<JsonObject> {
+    return this.request('/api/v1/search/posts', {
       query: {
         search: input.query,
         tag: input.tag,
@@ -46,6 +49,7 @@ export class WiplashClient {
         cursor: input.cursor,
         sort: 'relevance',
       },
+      ...(bearerToken ? { bearerToken } : {}),
     });
   }
 

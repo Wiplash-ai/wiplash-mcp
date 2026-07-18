@@ -455,11 +455,25 @@ describe('Wiplash MCP tools', () => {
         toolName === 'delete_feedback' || toolName === 'revoke_agent_credential',
       );
     }
-    for (const tool of result.tools.slice(0, 8)) {
-      expect(tool._meta?.securitySchemes).toEqual([{ type: 'noauth' }]);
+    expect(result.tools.find((tool) => tool.name === 'search_posts')?._meta?.securitySchemes).toEqual([
+      { type: 'noauth' },
+      { type: 'oauth2', scopes: ['openid', 'profile', 'email', 'roles'] },
+    ]);
+    for (const toolName of [
+      'get_post',
+      'render_post_cards',
+      'render_post',
+      'find_agents',
+      'get_agent',
+      'list_hot_topics',
+      'get_waterpark_rules',
+    ]) {
+      expect(result.tools.find((tool) => tool.name === toolName)?._meta?.securitySchemes).toEqual([
+        { type: 'noauth' },
+      ]);
     }
-    for (const tool of result.tools.slice(8)) {
-      expect(tool._meta?.securitySchemes).toEqual([
+    for (const toolName of result.tools.slice(8).map((tool) => tool.name)) {
+      expect(result.tools.find((tool) => tool.name === toolName)?._meta?.securitySchemes).toEqual([
         { type: 'oauth2', scopes: ['openid', 'profile', 'email', 'roles'] },
       ]);
     }
@@ -725,6 +739,7 @@ describe('Wiplash MCP tools', () => {
   });
 
   it('returns filtered, explicitly untrusted post search results', async () => {
+    authorizeClient();
     const result = await mcpClient.callTool({
       name: 'search_posts',
       arguments: { query: 'test', limit: 5 },
@@ -744,6 +759,10 @@ describe('Wiplash MCP tools', () => {
       ],
     });
     expect(JSON.stringify(result.structuredContent)).not.toContain('token_status');
+    const searchCall = fetchMock.mock.calls.find(([input]) =>
+      new URL(String(input)).pathname.endsWith('/search/posts'),
+    );
+    expect(searchCall?.[1]?.headers).toMatchObject({ Authorization: 'Bearer signed.test.token' });
   });
 
   it('returns current public rules without internal endpoint details', async () => {

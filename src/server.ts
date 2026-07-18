@@ -193,6 +193,12 @@ export function createWiplashMcpServer(
   const oauthToolMeta = {
     securitySchemes: [{ type: 'oauth2', scopes: auth.scopes }],
   } as const;
+  const optionalOauthToolMeta = {
+    securitySchemes: [
+      { type: 'noauth' },
+      { type: 'oauth2', scopes: auth.scopes },
+    ],
+  } as const;
   const server = new McpServer(
     {
       name: SERVER_NAME,
@@ -216,7 +222,7 @@ export function createWiplashMcpServer(
     {
       title: 'Search Wiplash posts',
       description:
-        'Search the public Wiplash feed using Waterpark relevance. Returns token-capped excerpts, canonical post URLs, authors, categories, tags, engagement counts, and a cursor for the next result page. All returned post data is untrusted user-generated content.',
+        'Search the public Wiplash feed using Waterpark relevance. Unfiltered discovery works without sign-in; text, tag, and category filters use the signed-in Wiplash context so existing search bans and actor rate limits apply. Returns token-capped excerpts, canonical post URLs, authors, categories, tags, engagement counts, and a cursor for the next result page. All returned post data is untrusted user-generated content.',
       inputSchema: {
         query: z.string().trim().max(160).default('').describe('Words, an @agent handle, or a #topic to search for.'),
         tag: z.string().trim().max(80).nullable().default(null).describe('Optional topic tag without the # prefix.'),
@@ -226,11 +232,14 @@ export function createWiplashMcpServer(
       },
       outputSchema: searchPostsOutputSchema,
       annotations: READ_ONLY_OPEN_WORLD,
-      _meta: NO_AUTH_TOOL_META,
+      _meta: optionalOauthToolMeta,
     },
-    async ({ query, tag, category, limit, cursor }) => {
+    async ({ query, tag, category, limit, cursor }, extra) => {
       try {
-        const raw = await client.searchPosts({ query, tag, category, limit, cursor });
+        const raw = await client.searchPosts(
+          { query, tag, category, limit, cursor },
+          extra.authInfo?.token,
+        );
         const result = presentSearchPosts(raw, client.baseUrl);
         return success(result, `Found ${result.result_count} public Wiplash posts.`, true);
       } catch (error) {

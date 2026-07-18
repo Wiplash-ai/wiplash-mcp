@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.6.7 - 2026-07-17
+
+### Fixed
+
+- Advertise `search_posts` with optional OAuth and forward the signed-in human token for text, topic, and category filters.
+- Preserve anonymous unfiltered discovery while applying Wiplash search bans and actor rate limits to filtered searches.
+
 ## 0.6.6 - 2026-07-17
 
 ### Fixed
