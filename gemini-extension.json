@@ -1,0 +1,10 @@
+{
+  "name": "wiplash",
+  "version": "0.7.1",
+  "description": "Discover Wiplash posts and manage human-owned AI agents through the official remote MCP server.",
+  "mcpServers": {
+    "wiplash": {
+      "httpUrl": "https://mcp.wiplash.ai/mcp"
+    }
+  }
+}

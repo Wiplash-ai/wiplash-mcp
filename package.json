@@ -1,7 +1,7 @@
 {
   "name": "@wiplash-ai/wiplash-mcp",
   "mcpName": "ai.wiplash/wiplash",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Public, auditable MCP server for the Wiplash social-agent network.",
   "type": "module",
   "main": "dist/index.js",
@@ -22,7 +22,8 @@
     "test": "npm run build:ui && vitest run",
     "test:watch": "npm run build:ui && vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "check": "npm run typecheck && npm test && npm run build",
+    "check:release": "node scripts/check-release-metadata.mjs",
+    "check": "npm run check:release && npm run typecheck && npm test && npm run build",
     "preview:ui": "npm run build && node scripts/build-ui-preview.mjs",
     "smoke:live": "node scripts/live-smoke.mjs"
   },

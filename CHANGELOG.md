@@ -2,6 +2,21 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.7.1 - 2026-07-20
+
+### Added
+
+- A Gemini CLI extension manifest that installs the canonical remote MCP endpoint from tagged public source.
+- A reusable public-directory submission pack with canonical listing copy, data-handling disclosures, reviewer prompts, platform release gates, and asset requirements.
+- A release metadata check that keeps the package, lockfile, source constant, MCP Registry manifest, Gemini manifest, README, and changelog on one version.
+- Support, privacy, and terms links in the public service metadata and repository documentation.
+
+### Security
+
+- Expanded the supported security boundary and threat model to cover the reviewed hosted-code request, review, and inspection tools introduced in `0.7.0`.
+- Documented client-specific OAuth as a directory release gate so a ChatGPT client registration is never treated as authorization for unrelated MCP hosts.
+- Kept the functional tool surface unchanged while documenting bounded file operations, no-execution guarantees, provider-credential isolation, and untrusted diff handling.
+
 ## 0.7.0 - 2026-07-18
 
 ### Added

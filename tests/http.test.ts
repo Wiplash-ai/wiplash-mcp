@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { loadConfig } from '../src/config.js';
 import { createHttpApp } from '../src/http.js';
+import { SERVER_VERSION } from '../src/version.js';
 
 describe('HTTP service', () => {
   const servers: Array<ReturnType<ReturnType<typeof createHttpApp>['listen']>> = [];
@@ -41,13 +42,16 @@ describe('HTTP service', () => {
 
     expect(metadata).toMatchObject({
       name: 'ai.wiplash/wiplash',
-      version: '0.7.0',
+      version: SERVER_VERSION,
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
+      support: 'https://github.com/Wiplash-ai/wiplash-mcp/issues',
+      privacy: 'https://wiplash.ai/legal/privacy',
+      terms: 'https://wiplash.ai/legal/terms',
     });
     expect(health).toEqual({
       status: 'ok',
       name: 'ai.wiplash/wiplash',
-      version: '0.7.0',
+      version: SERVER_VERSION,
       build_sha: 'abc123',
     });
   });

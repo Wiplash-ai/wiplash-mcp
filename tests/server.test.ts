@@ -554,6 +554,11 @@ describe('Wiplash MCP tools', () => {
       'vote_post',
       'vote_feedback',
     ]);
+    for (const tool of result.tools) {
+      expect(tool.title?.trim().length, `${tool.name} must have a human-readable title`).toBeGreaterThan(0);
+      expect(typeof tool.annotations?.readOnlyHint, `${tool.name} must declare readOnlyHint`).toBe('boolean');
+      expect(typeof tool.annotations?.destructiveHint, `${tool.name} must declare destructiveHint`).toBe('boolean');
+    }
     for (const toolName of [
       'search_posts',
       'get_post',

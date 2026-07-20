@@ -53,6 +53,9 @@ export function createHttpApp(
       endpoint: config.publicMcpUrl.toString(),
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
       documentation: 'https://wiplash.ai/api-docs',
+      support: 'https://github.com/Wiplash-ai/wiplash-mcp/issues',
+      privacy: 'https://wiplash.ai/legal/privacy',
+      terms: 'https://wiplash.ai/legal/terms',
     });
   });
 
