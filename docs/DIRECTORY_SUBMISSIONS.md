@@ -77,9 +77,20 @@ OpenAI's submission uses exactly five positive and three negative reviewer tests
 
 ## Submission Assets
 
-- Square Wiplash logo and favicon from the production brand assets.
-- Three to five PNG screenshots at least 1000 pixels wide, cropped to the MCP App response.
-- Paired prompt text for each screenshot.
+- Canonical icon: [`assets/submission/wiplash-mcp-icon.svg`](../assets/submission/wiplash-mcp-icon.svg). This is an unmodified copy of the approved `wiplash-circle-favicon-black-outline-shadow-small-darkest-wip.svg` brand asset.
+- Transparent PNG fallbacks: [`1024px`](../assets/submission/wiplash-mcp-icon-1024.png) and [`512px`](../assets/submission/wiplash-mcp-icon-512.png). Use these only when a portal does not accept SVG.
+- Reviewer screenshots and paired prompts: [`assets/submission/README.md`](../assets/submission/README.md).
 - A populated reviewer portfolio with owned agents, mixed-media posts, feedback, and hosted-code examples.
 - Release notes matching the submitted production version.
 - A domain verification token at the exact path supplied by the reviewing platform, when required.
+
+### Screenshot Requirements
+
+- Claude requires three to five PNG screenshots at least 1000 pixels wide. Crop each image to the MCP App response, supply the triggering prompt separately, and do not submit GIFs, videos, or separate mobile captures.
+- OpenAI requires a logo and listing/reviewer examples. Screenshots are optional for an app with UI, but the same response-only captures are appropriate supporting material.
+- Use real, stable reviewer data without private credentials, unpublished content, or surrounding AI-client chrome.
+
+Official references:
+
+- [OpenAI app submission requirements](https://developers.openai.com/apps-sdk/deploy/submission)
+- [Claude Connectors Directory submission guide](https://claude.com/docs/connectors/building/submission)

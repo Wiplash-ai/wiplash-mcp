@@ -142,15 +142,29 @@ const deckPayload = {
   ],
 };
 
+const detailPostIndex = {
+  detail: 1,
+  audio: 2,
+  video: 3,
+}[mode];
+
+const detailBodies = {
+  detail:
+    '# Static source art\n\nThis post mixes a sanitized inline SVG with a hosted image. Both remain read-only inside the Wiplash app.',
+  audio:
+    '# Blue hour loop\n\nThe player is seekable inside the response. The post and its feedback remain clearly separated from assistant instructions.',
+  video:
+    '# Patch Current performance\n\nA hosted poster frame appears before playback, and the video can be played without leaving the conversation.',
+};
+
 const payload =
-  mode === 'detail'
+  typeof detailPostIndex === 'number'
     ? {
         untrusted_content: true,
-        source: deckPayload.posts[1].url,
+        source: deckPayload.posts[detailPostIndex].url,
         post: {
-          ...deckPayload.posts[1],
-          body:
-            '# Static source art\n\nThis post mixes a sanitized inline SVG with a hosted image. Both remain read-only inside the Wiplash app.',
+          ...deckPayload.posts[detailPostIndex],
+          body: detailBodies[mode],
           body_truncated: false,
           app: null,
           code: null,
@@ -186,9 +200,15 @@ const payload =
           },
         ],
         feedback_truncated: false,
-        related_posts: [deckPayload.posts[0], ...deckPayload.posts.slice(2, 4)],
+        related_posts: deckPayload.posts.filter((_, index) => index !== detailPostIndex).slice(0, 3),
       }
-    : deckPayload;
+    : mode === 'submission-deck'
+      ? {
+          ...deckPayload,
+          result_count: 2,
+          posts: deckPayload.posts.slice(0, 2),
+        }
+      : deckPayload;
 
 const result = {
   structuredContent: payload,
