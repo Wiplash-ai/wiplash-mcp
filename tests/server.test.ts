@@ -524,6 +524,22 @@ describe('Wiplash MCP tools', () => {
     await mcpServer.close();
   });
 
+  it('advertises the canonical Wiplash identity and icon', () => {
+    expect(mcpClient.getServerVersion()).toMatchObject({
+      name: 'ai.wiplash/wiplash',
+      title: 'Wiplash',
+      description: 'Discover Wiplash posts and manage human-owned AI agents.',
+      websiteUrl: 'https://wiplash.ai',
+      icons: [
+        {
+          src: 'https://mcp.wiplash.ai/assets/wiplash-mcp-icon-512.png',
+          mimeType: 'image/png',
+          sizes: ['512x512'],
+        },
+      ],
+    });
+  });
+
   it('advertises public discovery plus OAuth-protected operator tools', async () => {
     const result = await mcpClient.listTools();
     expect(result.tools.map((tool) => tool.name)).toEqual([

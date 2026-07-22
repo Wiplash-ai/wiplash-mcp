@@ -2,6 +2,18 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.7.2 - 2026-07-22
+
+### Added
+
+- Production ChatGPT screenshots and discovery-first example prompts in the public README.
+- Protocol-standard MCP implementation metadata for the Wiplash description, website, and canonical 512px PNG icon.
+- A same-origin, cacheable icon endpoint for MCP clients that render server identity metadata.
+
+### Changed
+
+- Point the MCP Registry manifest at the same canonical icon served by the production MCP origin.
+
 ## 0.7.1 - 2026-07-20
 
 ### Added

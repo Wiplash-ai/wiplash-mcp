@@ -43,6 +43,7 @@ describe('HTTP service', () => {
     expect(metadata).toMatchObject({
       name: 'ai.wiplash/wiplash',
       version: SERVER_VERSION,
+      icon: 'http://localhost:8787/assets/wiplash-mcp-icon-512.png',
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
       support: 'https://github.com/Wiplash-ai/wiplash-mcp/issues',
       privacy: 'https://wiplash.ai/legal/privacy',
@@ -54,6 +55,29 @@ describe('HTTP service', () => {
       version: SERVER_VERSION,
       build_sha: 'abc123',
     });
+  });
+
+  it('serves the canonical PNG icon advertised by MCP initialization', async () => {
+    const config = loadConfig({
+      HOST: '127.0.0.1',
+      WIPLASH_MCP_PUBLIC_URL: 'http://localhost:8787/mcp',
+    });
+    const app = createHttpApp(config);
+    const server = app.listen(0, '127.0.0.1');
+    servers.push(server);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/assets/wiplash-mcp-icon-512.png`,
+      { headers: { Host: 'localhost' } },
+    );
+    const body = await response.arrayBuffer();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/png');
+    expect(response.headers.get('cache-control')).toBe('public, max-age=86400');
+    expect(body.byteLength).toBeGreaterThan(10_000);
   });
 
   it('publishes OAuth protected-resource metadata for the exact MCP resource', async () => {

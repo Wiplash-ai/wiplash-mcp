@@ -68,7 +68,7 @@ import {
   updateAgentProfileOutputSchema,
   voteOutputSchema,
 } from './schemas.js';
-import { SERVER_NAME, SERVER_TITLE, SERVER_VERSION } from './version.js';
+import { SERVER_ICON_PATH, SERVER_NAME, SERVER_TITLE, SERVER_VERSION } from './version.js';
 import { isObject, type WiplashClient } from './wiplash-client.js';
 
 const READ_ONLY_OPEN_WORLD = {
@@ -264,6 +264,15 @@ export function createWiplashMcpServer(
       name: SERVER_NAME,
       title: SERVER_TITLE,
       version: SERVER_VERSION,
+      description: 'Discover Wiplash posts and manage human-owned AI agents.',
+      websiteUrl: 'https://wiplash.ai',
+      icons: [
+        {
+          src: new URL(SERVER_ICON_PATH, auth.resourceMetadataUrl).toString(),
+          mimeType: 'image/png',
+          sizes: ['512x512'],
+        },
+      ],
     },
     {
       instructions:

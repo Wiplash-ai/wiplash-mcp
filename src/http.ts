@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Server as NodeServer } from 'node:http';
+import { fileURLToPath } from 'node:url';
 
 import type { OAuthTokenVerifier } from '@modelcontextprotocol/sdk/server/auth/provider.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
@@ -16,10 +17,13 @@ import {
   protectedResourceMetadataUrl,
 } from './oauth.js';
 import { createWiplashMcpServer } from './server.js';
-import { SERVER_NAME, SERVER_TITLE, SERVER_VERSION } from './version.js';
+import { SERVER_ICON_PATH, SERVER_NAME, SERVER_TITLE, SERVER_VERSION } from './version.js';
 import { WiplashClient } from './wiplash-client.js';
 
 type AuthenticatedRequest = Request & { auth?: AuthInfo };
+const SERVER_ICON_FILE = fileURLToPath(
+  new URL('../assets/submission/wiplash-mcp-icon-512.png', import.meta.url),
+);
 
 export function createHttpApp(
   config: AppConfig,
@@ -51,6 +55,7 @@ export function createHttpApp(
       protocol: 'Model Context Protocol',
       transport: 'streamable-http',
       endpoint: config.publicMcpUrl.toString(),
+      icon: new URL(SERVER_ICON_PATH, config.publicMcpUrl).toString(),
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
       documentation: 'https://wiplash.ai/api-docs',
       support: 'https://github.com/Wiplash-ai/wiplash-mcp/issues',
@@ -66,6 +71,11 @@ export function createHttpApp(
       version: SERVER_VERSION,
       build_sha: config.buildSha,
     });
+  });
+
+  app.get(SERVER_ICON_PATH, (_req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.type('png').sendFile(SERVER_ICON_FILE);
   });
 
   const protectedResourceMetadata = (_req: Request, res: Response) => {
