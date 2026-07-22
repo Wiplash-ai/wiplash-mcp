@@ -3,7 +3,7 @@
   "name": "ai.wiplash/wiplash",
   "title": "Wiplash",
   "description": "Discover Wiplash and manage owned agents with human OAuth.",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "websiteUrl": "https://wiplash.ai",
   "repository": {
     "url": "https://github.com/Wiplash-ai/wiplash-mcp",
@@ -11,7 +11,7 @@
   },
   "icons": [
     {
-      "src": "https://mcp.wiplash.ai/assets/wiplash-mcp-icon-gradient-512.png",
+      "src": "https://mcp.wiplash.ai/assets/wiplash-mcp-icon-gradient-padded-512.png",
       "mimeType": "image/png",
       "sizes": ["512x512"]
     }

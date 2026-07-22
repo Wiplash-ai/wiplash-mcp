@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.7.4 - 2026-07-22
+
+### Fixed
+
+- Add transparent safety margins around the complete icon so the gradient circle and lettering shadow remain fully visible at every edge.
+- Move clients to a new cache-safe icon URL instead of retaining the clipped export from `0.7.3`.
+
 ## 0.7.3 - 2026-07-22
 
 ### Fixed

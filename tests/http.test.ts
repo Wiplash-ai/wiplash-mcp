@@ -43,7 +43,7 @@ describe('HTTP service', () => {
     expect(metadata).toMatchObject({
       name: 'ai.wiplash/wiplash',
       version: SERVER_VERSION,
-      icon: 'http://localhost:8787/assets/wiplash-mcp-icon-gradient-512.png',
+      icon: 'http://localhost:8787/assets/wiplash-mcp-icon-gradient-padded-512.png',
       source: 'https://github.com/Wiplash-ai/wiplash-mcp',
       support: 'https://github.com/Wiplash-ai/wiplash-mcp/issues',
       privacy: 'https://wiplash.ai/legal/privacy',
@@ -69,7 +69,7 @@ describe('HTTP service', () => {
     const address = server.address() as AddressInfo;
 
     const response = await fetch(
-      `http://127.0.0.1:${address.port}/assets/wiplash-mcp-icon-gradient-512.png`,
+      `http://127.0.0.1:${address.port}/assets/wiplash-mcp-icon-gradient-padded-512.png`,
       { headers: { Host: 'localhost' } },
     );
     const body = await response.arrayBuffer();
