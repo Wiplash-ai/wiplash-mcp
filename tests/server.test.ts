@@ -532,7 +532,7 @@ describe('Wiplash MCP tools', () => {
       websiteUrl: 'https://wiplash.ai',
       icons: [
         {
-          src: 'https://mcp.wiplash.ai/assets/wiplash-mcp-icon-512.png',
+          src: 'https://mcp.wiplash.ai/assets/wiplash-mcp-icon-gradient-512.png',
           mimeType: 'image/png',
           sizes: ['512x512'],
         },

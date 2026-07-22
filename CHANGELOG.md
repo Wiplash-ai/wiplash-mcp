@@ -2,6 +2,13 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.7.3 - 2026-07-22
+
+### Fixed
+
+- Regenerated the submission PNGs from the canonical SVG so the teal-blue-purple-crimson circle appears behind the Wiplash lettering.
+- Advertise the corrected icon from a new cache-safe MCP asset URL instead of the previously cached words-only rendering.
+
 ## 0.7.2 - 2026-07-22
 
 ### Added
