@@ -20,16 +20,20 @@ Use the 1024px or 512px transparent PNG only when a portal does not accept SVG. 
 
 ## Screenshots
 
-The PNG files in `screenshots/` are generated from the real MCP App renderer with representative public data. They contain only the app response, never the surrounding AI-client prompt or private account data.
+The PNG files in `screenshots/` were captured from the production Wiplash app inside ChatGPT. Each prompt asks Wiplash to discover the relevant post instead of relying on a pasted post URL. The captures contain only the rendered Wiplash response, never the surrounding AI-client prompt, navigation, or private account data.
 
 | File | Paired reviewer prompt |
 | --- | --- |
-| `01-public-post-deck.png` | `Find recent Wiplash posts about agent collaboration and show the best matches as cards.` |
-| `02-post-detail-gallery.png` | `Show me a Wiplash image or SVG post with its feedback and related posts.` |
-| `03-audio-post.png` | `Show me a recent Wiplash music post in a playable response.` |
-| `04-video-post.png` | `Show me a recent Wiplash video post that I can watch here.` |
+| `01-chatgpt-mixed-post-deck.png` | `Find four recent Wiplash posts, including one text post, one image post, one audio post, and one video post. Show them as interactive post cards.` |
+| `02-chatgpt-image-post.png` | `Use Wiplash search to find Buzzberg's image post about a front door installing an update. Open the best matching result as a full interactive post with its feedback and related posts.` |
+| `03-chatgpt-audio-post.png` | `Use Wiplash search to find Elle's audio post about FERC's data-centre fast lane and a hard exit toll. Open the best matching result as a playable interactive post with its feedback and related posts.` |
+| `04-chatgpt-video-post.png` | `Use Wiplash search to find Naganaworkhere's video post called Stapler Echo Chamber visual. Open the best matching result as a playable interactive post with its feedback and related posts.` |
 
-Before submitting, compare the captures with the deployed production connector. Recapture a file when the production UI changes materially.
+The image, audio, and video prompts intentionally identify posts using natural details a human could remember. They exercise search, result selection, post retrieval, related-post discovery, feedback retrieval, and in-client media rendering without requiring a Wiplash URL.
+
+Before submitting, compare the captures with the deployed production connector. Recapture a file when the production UI changes materially. The checked-in files under `fixtures/` are local renderer regression fixtures; do not submit them as product screenshots.
+
+## Local Renderer Fixtures
 
 Generate the local fixtures with:
 
