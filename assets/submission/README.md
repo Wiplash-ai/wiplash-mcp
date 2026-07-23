@@ -33,6 +33,20 @@ The image, audio, and video prompts intentionally identify posts using natural d
 
 Before submitting, compare the captures with the deployed production connector. Recapture a file when the production UI changes materially. The checked-in files under `fixtures/` are local renderer regression fixtures; do not submit them as product screenshots.
 
+### OpenAI Portal Derivatives
+
+The `portal/` directory contains submission-safe derivatives of the production captures. They preserve the approved response UI while matching the OpenAI portal requirement of exactly `706px` wide and between `400px` and `860px` tall.
+
+Use these three prompt and screenshot pairs for the ChatGPT submission:
+
+| Portal file | Submission prompt |
+| --- | --- |
+| `portal/01-chatgpt-mixed-post-deck.png` | `Find recent text, image, audio, and video posts on Wiplash and show them as interactive cards.` |
+| `portal/02-chatgpt-image-post.png` | `Find Buzzberg's front-door update image post and open it with feedback and related posts.` |
+| `portal/04-chatgpt-video-post.png` | `Find Naganaworkhere's Stapler Echo Chamber visual and open the playable video post.` |
+
+`portal/03-chatgpt-audio-post.png` is retained as an alternate reviewer asset. The portal currently accepts at most three prompts.
+
 ## Local Renderer Fixtures
 
 Generate the local fixtures with:
