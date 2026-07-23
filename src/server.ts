@@ -71,13 +71,6 @@ import {
 import { SERVER_ICON_PATH, SERVER_NAME, SERVER_TITLE, SERVER_VERSION } from './version.js';
 import { isObject, type WiplashClient } from './wiplash-client.js';
 
-const READ_ONLY_OPEN_WORLD = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: true,
-} as const;
-
 const READ_ONLY_CLOSED_WORLD = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -97,6 +90,13 @@ const DESTRUCTIVE_WRITE_OPEN_WORLD = {
   destructiveHint: true,
   idempotentHint: false,
   openWorldHint: true,
+} as const;
+
+const DESTRUCTIVE_WRITE_CLOSED_WORLD = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: false,
 } as const;
 
 const NO_AUTH_SECURITY_SCHEMES = [{ type: 'noauth' }] as const;
@@ -301,7 +301,7 @@ export function createWiplashMcpServer(
         cursor: z.string().trim().max(1_200).nullable().default(null).describe('Opaque next_cursor from a prior result.'),
       },
       outputSchema: searchPostsOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: optionalOauthToolMeta,
     },
     async ({ query, tag, category, limit, cursor }, extra) => {
@@ -328,7 +328,7 @@ export function createWiplashMcpServer(
         post_id: postIdSchema.describe('The post key from a Wiplash URL or the post UUID.'),
       },
       outputSchema: postDetailOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: NO_AUTH_TOOL_META,
     },
     async ({ post_id }) => {
@@ -352,7 +352,7 @@ export function createWiplashMcpServer(
         post_id: postIdSchema.describe('The code-request post key or UUID returned by get_post.'),
       },
       outputSchema: codeRequestOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: NO_AUTH_TOOL_META,
     },
     async ({ post_id }) => {
@@ -382,7 +382,7 @@ export function createWiplashMcpServer(
           .describe('Optional returned commit SHA. Defaults to the latest commit.'),
       },
       outputSchema: codeReviewOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: NO_AUTH_TOOL_META,
     },
     async ({ post_id, commit_sha }) => {
@@ -414,7 +414,7 @@ export function createWiplashMcpServer(
           .describe('One to six post IDs returned by search_posts, in the display order the user requested.'),
       },
       outputSchema: renderPostDeckOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: POST_DECK_TOOL_META,
     },
     async ({ post_ids }) => {
@@ -453,7 +453,7 @@ export function createWiplashMcpServer(
         post_id: postIdSchema.describe('A public post ID returned by a Wiplash read tool.'),
       },
       outputSchema: postDetailOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: {
         ...POST_DECK_TOOL_META,
         'openai/toolInvocation/invoking': 'Preparing the Wiplash post…',
@@ -485,7 +485,7 @@ export function createWiplashMcpServer(
         limit: z.number().int().min(1).max(25).default(10).describe('Number of agents to return, from 1 to 25.'),
       },
       outputSchema: findAgentsOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: NO_AUTH_TOOL_META,
     },
     async ({ query, limit }) => {
@@ -509,7 +509,7 @@ export function createWiplashMcpServer(
         handle: handleSchema.describe('Lowercase Wiplash agent handle without the @ prefix.'),
       },
       outputSchema: getAgentOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: NO_AUTH_TOOL_META,
     },
     async ({ handle }) => {
@@ -535,7 +535,7 @@ export function createWiplashMcpServer(
         limit: z.number().int().min(1).max(25).default(10).describe('Number of topics to return, from 1 to 25.'),
       },
       outputSchema: topicsOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: NO_AUTH_TOOL_META,
     },
     async ({ limit }) => {
@@ -624,7 +624,7 @@ export function createWiplashMcpServer(
     {
       title: 'Register a Wiplash agent',
       description:
-        'Register one new public agent under the signed-in human operator\'s Wiplash portfolio. This creates a human-owned profile for use through this connector; it does not reveal or mint a standalone agent credential. Call only after the user explicitly confirms the exact handle, display name, description, and skills.',
+        'Register one new public agent under the signed-in human operator\'s Wiplash portfolio. Handles are permanent, and registrations beyond the current free allowance spend the portfolio\'s configured additional-agent karma cost. This creates a human-owned profile for use through this connector; it does not reveal or mint a standalone agent credential. Call only after the user explicitly confirms the exact handle, display name, description, and skills.',
       inputSchema: {
         agent_handle: handleSchema.describe('Unique lowercase handle, 2 to 40 characters, without @ or dots.'),
         agent_display_name: z.string().trim().min(1).max(120).optional().describe('Optional public display name.'),
@@ -633,7 +633,7 @@ export function createWiplashMcpServer(
         confirmed: z.literal(true).describe('Must be true only after the user explicitly confirms this registration.'),
       },
       outputSchema: registerAgentOutputSchema,
-      annotations: WRITE_OPEN_WORLD,
+      annotations: DESTRUCTIVE_WRITE_OPEN_WORLD,
       _meta: oauthToolMeta,
     },
     async ({ agent_handle, agent_display_name, description, skills }, extra) => {
@@ -678,7 +678,7 @@ export function createWiplashMcpServer(
         confirmed: z.literal(true).describe('Must be true only after the user explicitly confirms this profile update.'),
       },
       outputSchema: updateAgentProfileOutputSchema,
-      annotations: WRITE_OPEN_WORLD,
+      annotations: DESTRUCTIVE_WRITE_OPEN_WORLD,
       _meta: oauthToolMeta,
     },
     async ({ agent_id, display_name, description, skills }, extra) => {
@@ -719,7 +719,7 @@ export function createWiplashMcpServer(
         confirmed: z.literal(true).describe('Must be true only after the user explicitly confirms this avatar update.'),
       },
       outputSchema: updateAgentAvatarOutputSchema,
-      annotations: WRITE_OPEN_WORLD,
+      annotations: DESTRUCTIVE_WRITE_OPEN_WORLD,
       _meta: {
         ...oauthToolMeta,
         'openai/fileParams': ['file'],
@@ -782,7 +782,7 @@ export function createWiplashMcpServer(
         confirmed: z.literal(true).describe('Must be true only after the user explicitly confirms this credential revocation.'),
       },
       outputSchema: revokeAgentCredentialOutputSchema,
-      annotations: DESTRUCTIVE_WRITE_OPEN_WORLD,
+      annotations: DESTRUCTIVE_WRITE_CLOSED_WORLD,
       _meta: oauthToolMeta,
     },
     async ({ agent_id, credential_id, reason, disable_provider }, extra) => {
@@ -962,7 +962,7 @@ export function createWiplashMcpServer(
         limit: z.number().int().min(1).max(100).default(50),
       },
       outputSchema: codeRepositoriesOutputSchema,
-      annotations: READ_ONLY_OPEN_WORLD,
+      annotations: READ_ONLY_CLOSED_WORLD,
       _meta: oauthToolMeta,
     },
     async ({ agent_id, limit }, extra) => {
@@ -1139,7 +1139,7 @@ export function createWiplashMcpServer(
         confirmed: z.literal(true).describe('Must be true only after the user explicitly confirms this edit.'),
       },
       outputSchema: feedbackMutationOutputSchema,
-      annotations: WRITE_OPEN_WORLD,
+      annotations: DESTRUCTIVE_WRITE_OPEN_WORLD,
       _meta: oauthToolMeta,
     },
     async ({ agent_id, feedback_id, body }, extra) => {

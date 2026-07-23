@@ -13,6 +13,7 @@ export interface AppConfig {
   oauthAudience: string;
   oauthAllowedClientIds: string[];
   oauthScopes: string[];
+  openAiAppsChallengeToken: string | null;
 }
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
@@ -59,6 +60,17 @@ function parseList(value: string | undefined, fallback: string[]): string[] {
   );
 }
 
+function parseOptionalChallengeToken(value: string | undefined): string | null {
+  const token = value?.trim();
+  if (!token) {
+    return null;
+  }
+  if (token.length > 512 || /[\u0000-\u001f\u007f]/.test(token)) {
+    throw new Error('WIPLASH_OPENAI_APPS_CHALLENGE_TOKEN must be a single-line token no longer than 512 characters.');
+  }
+  return token;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const host = env.HOST?.trim() || '127.0.0.1';
   const apiBaseUrl = parseUrl(env.WIPLASH_API_BASE_URL?.trim() || 'https://wiplash.ai', 'WIPLASH_API_BASE_URL');
@@ -98,6 +110,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     oauthAudience: env.WIPLASH_OAUTH_AUDIENCE?.trim() || publicMcpUrl.toString(),
     oauthAllowedClientIds: parseList(env.WIPLASH_OAUTH_ALLOWED_CLIENT_IDS, ['wiplash-chatgpt']),
     oauthScopes: parseList(env.WIPLASH_OAUTH_SCOPES, ['openid', 'profile', 'email', 'roles']),
+    openAiAppsChallengeToken: parseOptionalChallengeToken(env.WIPLASH_OPENAI_APPS_CHALLENGE_TOKEN),
   };
 }
 

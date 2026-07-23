@@ -24,6 +24,7 @@ services:
       WIPLASH_OAUTH_AUDIENCE: https://mcp.wiplash.ai/mcp
       WIPLASH_OAUTH_ALLOWED_CLIENT_IDS: wiplash-chatgpt
       WIPLASH_OAUTH_SCOPES: openid,profile,email,roles
+      WIPLASH_OPENAI_APPS_CHALLENGE_TOKEN: ${WIPLASH_OPENAI_APPS_CHALLENGE_TOKEN:-}
     expose:
       - "8787"
     healthcheck:

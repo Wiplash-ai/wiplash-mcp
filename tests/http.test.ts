@@ -82,6 +82,47 @@ describe('HTTP service', () => {
     expect(body.byteLength).toBeGreaterThan(100_000);
   });
 
+  it('serves the configured OpenAI app challenge as an exact plaintext body', async () => {
+    const config = loadConfig({
+      HOST: '127.0.0.1',
+      WIPLASH_MCP_PUBLIC_URL: 'http://localhost:8787/mcp',
+      WIPLASH_OPENAI_APPS_CHALLENGE_TOKEN: 'openai-domain-proof',
+    });
+    const app = createHttpApp(config);
+    const server = app.listen(0, '127.0.0.1');
+    servers.push(server);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/.well-known/openai-apps-challenge`,
+      { headers: { Host: 'localhost' } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/plain');
+    expect(await response.text()).toBe('openai-domain-proof');
+  });
+
+  it('does not expose the OpenAI app challenge route without a configured token', async () => {
+    const config = loadConfig({
+      HOST: '127.0.0.1',
+      WIPLASH_MCP_PUBLIC_URL: 'http://localhost:8787/mcp',
+    });
+    const app = createHttpApp(config);
+    const server = app.listen(0, '127.0.0.1');
+    servers.push(server);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/.well-known/openai-apps-challenge`,
+      { headers: { Host: 'localhost' } },
+    );
+
+    expect(response.status).toBe(404);
+  });
+
   it('publishes OAuth protected-resource metadata for the exact MCP resource', async () => {
     const config = loadConfig({
       HOST: '127.0.0.1',

@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
@@ -542,7 +544,7 @@ describe('Wiplash MCP tools', () => {
 
   it('advertises public discovery plus OAuth-protected operator tools', async () => {
     const result = await mcpClient.listTools();
-    expect(result.tools.map((tool) => tool.name)).toEqual([
+    const expectedToolNames = [
       'search_posts',
       'get_post',
       'inspect_code_request',
@@ -562,6 +564,37 @@ describe('Wiplash MCP tools', () => {
       'create_text_post',
       'create_media_post',
       'list_my_code_repositories',
+      'create_code_request',
+      'create_code_review',
+      'create_feedback',
+      'update_feedback',
+      'delete_feedback',
+      'vote_post',
+      'vote_feedback',
+    ];
+    expect(result.tools.map((tool) => tool.name)).toEqual(expectedToolNames);
+
+    const readOnlyTools = new Set([
+      'search_posts',
+      'get_post',
+      'inspect_code_request',
+      'inspect_code_review',
+      'render_post_cards',
+      'render_post',
+      'find_agents',
+      'get_agent',
+      'list_hot_topics',
+      'get_waterpark_rules',
+      'list_my_agents',
+      'get_my_agent',
+      'list_my_code_repositories',
+    ]);
+    const openWorldTools = new Set([
+      'register_agent',
+      'update_agent_profile',
+      'update_agent_avatar',
+      'create_text_post',
+      'create_media_post',
       'create_code_request',
       'create_code_review',
       'create_feedback',
@@ -570,51 +603,43 @@ describe('Wiplash MCP tools', () => {
       'vote_post',
       'vote_feedback',
     ]);
-    for (const tool of result.tools) {
-      expect(tool.title?.trim().length, `${tool.name} must have a human-readable title`).toBeGreaterThan(0);
-      expect(typeof tool.annotations?.readOnlyHint, `${tool.name} must declare readOnlyHint`).toBe('boolean');
-      expect(typeof tool.annotations?.destructiveHint, `${tool.name} must declare destructiveHint`).toBe('boolean');
-    }
-    for (const toolName of [
-      'search_posts',
-      'get_post',
-      'inspect_code_request',
-      'inspect_code_review',
-      'render_post_cards',
-      'render_post',
-      'find_agents',
-      'get_agent',
-      'list_hot_topics',
-      'get_waterpark_rules',
-      'list_my_agents',
-      'get_my_agent',
-      'list_my_code_repositories',
-    ]) {
-      const tool = result.tools.find((candidate) => candidate.name === toolName);
-      if (!tool) throw new Error(`Missing tool ${toolName}`);
-      expect(tool.annotations?.readOnlyHint).toBe(true);
-      expect(tool.annotations?.destructiveHint).toBe(false);
-    }
-    for (const toolName of [
+    const destructiveTools = new Set([
       'register_agent',
       'update_agent_profile',
       'update_agent_avatar',
       'revoke_agent_credential',
-      'create_text_post',
-      'create_media_post',
-      'create_code_request',
-      'create_code_review',
-      'create_feedback',
       'update_feedback',
       'delete_feedback',
-      'vote_post',
-      'vote_feedback',
-    ]) {
-      const tool = result.tools.find((candidate) => candidate.name === toolName);
-      expect(tool?.annotations?.readOnlyHint).toBe(false);
-      expect(tool?.annotations?.destructiveHint).toBe(
-        toolName === 'delete_feedback' || toolName === 'revoke_agent_credential',
-      );
+    ]);
+    const submission = JSON.parse(
+      await readFile(new URL('../chatgpt-app-submission.json', import.meta.url), 'utf8'),
+    ) as {
+      schema_version: number;
+      app_info: { display_name: string; subtitle: string; category: string };
+      tools: Record<string, { annotations: Record<string, boolean> }>;
+      test_cases: unknown[];
+      negative_test_cases: unknown[];
+    };
+    expect(submission.schema_version).toBe(1);
+    expect(submission.app_info).toMatchObject({
+      display_name: 'Wiplash',
+      category: 'COLLABORATION',
+    });
+    expect(submission.app_info.subtitle.length).toBeLessThanOrEqual(30);
+    expect(submission.test_cases).toHaveLength(5);
+    expect(submission.negative_test_cases).toHaveLength(3);
+    expect(Object.keys(submission.tools)).toEqual(expectedToolNames);
+
+    for (const tool of result.tools) {
+      const expectedAnnotations = {
+        readOnlyHint: readOnlyTools.has(tool.name),
+        openWorldHint: openWorldTools.has(tool.name),
+        destructiveHint: destructiveTools.has(tool.name),
+      };
+      expect(tool.title?.trim().length, `${tool.name} must have a human-readable title`).toBeGreaterThan(0);
+      expect(tool.outputSchema, `${tool.name} must declare outputSchema`).toBeDefined();
+      expect(tool.annotations).toMatchObject(expectedAnnotations);
+      expect(submission.tools[tool.name]?.annotations).toEqual(expectedAnnotations);
     }
     expect(result.tools.find((tool) => tool.name === 'search_posts')?._meta?.securitySchemes).toEqual([
       { type: 'noauth' },

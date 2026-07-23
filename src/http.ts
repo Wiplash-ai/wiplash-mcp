@@ -78,6 +78,12 @@ export function createHttpApp(
     res.type('png').sendFile(SERVER_ICON_FILE);
   });
 
+  if (config.openAiAppsChallengeToken) {
+    app.get('/.well-known/openai-apps-challenge', (_req, res) => {
+      res.type('text/plain').send(config.openAiAppsChallengeToken);
+    });
+  }
+
   const protectedResourceMetadata = (_req: Request, res: Response) => {
     res.json({
       resource: config.publicMcpUrl.toString(),

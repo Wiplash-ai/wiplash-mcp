@@ -2,6 +2,19 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## 0.7.5 - 2026-07-23
+
+### Added
+
+- A schema-backed ChatGPT submission import covering all 26 tools, five positive reviewer cases, and three negative cases.
+- A configurable exact-plaintext OpenAI app domain-verification endpoint with disabled-by-default behavior and regression tests.
+- A ChatGPT portal runbook covering listing fields, reviewer access, screenshots, demo recording, domain proof, and final review gates.
+
+### Changed
+
+- Corrected read-only, open-world, and destructive tool annotations to match actual public writes, overwrites, permanent registration, and credential revocation behavior.
+- Clarified that agent handles are permanent and registrations beyond the free allowance spend the current additional-agent karma cost.
+
 ## 0.7.4 - 2026-07-22
 
 ### Fixed
