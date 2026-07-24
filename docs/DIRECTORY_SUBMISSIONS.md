@@ -71,10 +71,10 @@ Current status as of July 24, 2026:
 | --- | --- | --- | --- |
 | Open MCP Registry | `server.json` with DNS namespace verification | `0.7.5` is active and current | Publish each future tagged version |
 | ChatGPT and Codex | OpenAI plugin submission portal | Version `1.0.0` is in review | Address reviewer feedback, then publish after approval |
-| Claude products | Claude Connectors Directory | Listing copy, icon, screenshots, and reviewer scenarios are ready | Team/Enterprise owner access, dedicated Claude OAuth registration, every-tool Claude test, and portal submission |
+| Claude products | Claude Connectors Directory | Listing copy, icon, screenshots, and reviewer scenarios are ready; an individual Claude account cannot access the submission portal | Team/Enterprise owner access, dedicated Claude OAuth registration, every-tool Claude test, and portal submission |
 | OpenCode | Direct remote MCP configuration | Public reads work; OpenCode has no central MCP marketplace submission | Dedicated OAuth client or standards-compliant DCR for protected tools |
 | Gemini CLI | Root `gemini-extension.json` plus `gemini-cli-extension` GitHub topic | Tagged package and discovery topic are live; the daily gallery crawl is pending | Dedicated OAuth client or standards-compliant DCR for protected tools |
-| Cursor | Public Cursor plugin and marketplace application | `.cursor-plugin/plugin.json`, `mcp.json`, and the approved icon are ready | Cursor publisher sign-in, dedicated OAuth client, client test, and marketplace review |
+| Cursor | Public Cursor plugin and marketplace application | Publisher application submitted July 24, 2026; `.cursor-plugin/plugin.json`, `mcp.json`, and the approved icon are ready | Publisher approval, dedicated OAuth client, client test, plugin submission, and marketplace review |
 | VS Code/Copilot | Official MCP Registry | Wiplash is eligible for discovery in VS Code's MCP gallery through the current registry entry | Dedicated OAuth client for protected tools in the target client |
 
 The client-specific OAuth gate is deliberate. A token issued to the ChatGPT client must not silently authorize an unrelated host. Anonymous discovery remains available to every compatible client while those registrations are completed.
