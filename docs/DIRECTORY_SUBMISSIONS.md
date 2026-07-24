@@ -69,7 +69,7 @@ Current status as of July 24, 2026:
 
 | Destination | Publication path | Current status | Remaining release gate |
 | --- | --- | --- | --- |
-| Open MCP Registry | `server.json` with DNS namespace verification | `0.7.5` is active and current | Publish each future tagged version |
+| Open MCP Registry | `server.json` with DNS namespace verification | `0.7.6` is active and current | Publish each future tagged version |
 | ChatGPT and Codex | OpenAI plugin submission portal | Version `1.0.0` is in review | Address reviewer feedback, then publish after approval |
 | Claude products | Claude Connectors Directory | Listing copy, icon, screenshots, and reviewer scenarios are ready; an individual Claude account cannot access the submission portal | Team/Enterprise owner access, dedicated Claude OAuth registration, every-tool Claude test, and portal submission |
 | OpenCode | Direct remote MCP configuration | Public reads work; OpenCode has no central MCP marketplace submission | Dedicated OAuth client or standards-compliant DCR for protected tools |
