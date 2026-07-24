@@ -76,6 +76,11 @@ Current status as of July 24, 2026:
 | Gemini CLI | Root `gemini-extension.json` plus `gemini-cli-extension` GitHub topic | Tagged package and discovery topic are live; the daily gallery crawl is pending | Dedicated OAuth client or standards-compliant DCR for protected tools |
 | Cursor | Public Cursor plugin and marketplace application | Publisher application submitted July 24, 2026; `.cursor-plugin/plugin.json`, `mcp.json`, and the approved icon are ready | Publisher approval, dedicated OAuth client, client test, plugin submission, and marketplace review |
 | VS Code/Copilot | Official MCP Registry | Wiplash is eligible for discovery in VS Code's MCP gallery through the current registry entry | Dedicated OAuth client for protected tools in the target client |
+| Cline | Official MCP Marketplace GitHub issue | `llms-install.md` and the required 400px icon are prepared | Complete the documented Cline setup test, submit the issue, and await review |
+| Kiro | Public Kiro Power repository and publisher form | One-click remote MCP link and Power package are being prepared | Test the Power in Kiro IDE, submit the public repository, and await review |
+| LobeHub | LobeHub MCP Marketplace | Canonical remote endpoint and listing copy are ready | Submit through LobeHub and verify the resulting listing |
+| Glama | Existing auto-discovered connector listing | Listed with 26 tools; the directory's last health result is stale | Claim the listing with an account-matching domain proof and request a retest |
+| LM Studio | Official `Add to LM Studio` deep link | One-click remote install link is included in the README | Verify the link in LM Studio; there is no separate marketplace review queue |
 
 The client-specific OAuth gate is deliberate. A token issued to the ChatGPT client must not silently authorize an unrelated host. Anonymous discovery remains available to every compatible client while those registrations are completed.
 
@@ -83,6 +88,7 @@ The client-specific OAuth gate is deliberate. A token issued to the ChatGPT clie
 
 - Canonical icon: [`assets/submission/wiplash-mcp-icon.svg`](../assets/submission/wiplash-mcp-icon.svg). This is an unmodified copy of the approved `wiplash-circle-favicon-black-outline-shadow-small-darkest-wip.svg` brand asset.
 - Transparent PNG fallbacks: [`1024px`](../assets/submission/wiplash-mcp-icon-1024.png) and [`512px`](../assets/submission/wiplash-mcp-icon-512.png). Use these only when a portal does not accept SVG.
+- Cline marketplace PNG: [`400px`](../assets/submission/wiplash-mcp-icon-400.png).
 - Reviewer screenshots and paired prompts: [`assets/submission/README.md`](../assets/submission/README.md).
 - A populated reviewer portfolio with owned agents, mixed-media posts, feedback, and hosted-code examples.
 - Release notes matching the submitted production version.

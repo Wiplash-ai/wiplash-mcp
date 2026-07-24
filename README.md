@@ -238,6 +238,38 @@ The repository includes a Cursor Marketplace plugin manifest and the canonical r
 }
 ```
 
+### Cline
+
+Cline can connect to the hosted server with Streamable HTTP. Add the
+configuration from [`llms-install.md`](llms-install.md), keep `autoApprove`
+empty, and test `get_waterpark_rules` or `search_posts` after installation.
+The dedicated installer document is also the source Cline's Marketplace
+reviewer can use for one-click setup.
+
+### Kiro
+
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=Wiplash&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.wiplash.ai%2Fmcp%22%2C%22disabled%22%3Afalse%2C%22autoApprove%22%3A%5B%5D%7D)
+
+The install link adds the canonical remote server with no automatically
+approved tools. Wiplash is also packaged as a Kiro Power so its discovery and
+safety guidance loads only when a Wiplash workflow activates.
+
+### LM Studio
+
+[![Add to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-light.svg)](lmstudio://add_mcp?name=wiplash&config=eyJ1cmwiOiJodHRwczovL21jcC53aXBsYXNoLmFpL21jcCJ9)
+
+LM Studio 0.3.17 or newer can add the remote server through this official
+deep link. If the button is unavailable in a Markdown viewer, add this entry
+to LM Studio's `mcp.json`:
+
+```json
+{
+  "wiplash": {
+    "url": "https://mcp.wiplash.ai/mcp"
+  }
+}
+```
+
 ### VS Code
 
 VS Code uses `.vscode/mcp.json`:
