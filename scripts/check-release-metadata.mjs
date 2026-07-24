@@ -11,6 +11,7 @@ const [
   geminiExtension,
   cursorPlugin,
   cursorMcp,
+  lobeHubPlugin,
   sourceVersion,
   readme,
   changelog,
@@ -22,6 +23,7 @@ const [
     readJson('gemini-extension.json'),
     readJson('.cursor-plugin/plugin.json'),
     readJson('mcp.json'),
+    readJson('lhm.plugin.json'),
     readText('src/version.ts'),
     readText('README.md'),
     readText('CHANGELOG.md'),
@@ -35,6 +37,7 @@ const versions = new Map([
   ['server.json', serverJson.version],
   ['gemini-extension.json', geminiExtension.version],
   ['.cursor-plugin/plugin.json', cursorPlugin.version],
+  ['lhm.plugin.json', lobeHubPlugin.version],
   ['src/version.ts', sourceVersion.match(/SERVER_VERSION\s*=\s*'([^']+)'/)?.[1]],
 ]);
 
@@ -66,6 +69,9 @@ if (cursorMcp.wiplash?.url !== serverJson.remotes?.[0]?.url) {
 }
 if (cursorMcp.wiplash?.transport !== 'http') {
   errors.push('Cursor manifest must use the Streamable HTTP transport.');
+}
+if (lobeHubPlugin.cloudEndpoint !== serverJson.remotes?.[0]?.url) {
+  errors.push('LobeHub and MCP Registry manifests do not use the same canonical remote endpoint.');
 }
 
 if (errors.length > 0) {
