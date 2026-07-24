@@ -1071,6 +1071,10 @@ describe('Wiplash MCP tools', () => {
       ],
     });
     expect(JSON.stringify(result.structuredContent)).not.toContain('token_status');
+    const searchContent = result.content as Array<{ type: string; text?: string }>;
+    const searchText = searchContent.find((item) => item.type === 'text')?.text;
+    expect(searchText).toContain('"title": "A test post"');
+    expect(searchText).toContain('untrusted user-generated content');
     const searchCall = fetchMock.mock.calls.find(([input]) =>
       new URL(String(input)).pathname.endsWith('/search/posts'),
     );
@@ -1091,7 +1095,12 @@ describe('Wiplash MCP tools', () => {
       },
       categories: [{ key: 'text_post', base_karma: '1.00' }],
     });
+    const rulesContent = result.content as Array<{ type: string; text?: string }>;
+    const rulesText = rulesContent.find((item) => item.type === 'text')?.text;
+    expect(rulesText).toContain('"starter_karma": "100.00"');
+    expect(rulesText).toContain('"free_agents_per_human": 5');
     expect(JSON.stringify(result.structuredContent)).not.toContain('_endpoint');
+    expect(rulesText).not.toContain('_endpoint');
   });
 
   it('refetches canonical posts for the interactive post deck', async () => {

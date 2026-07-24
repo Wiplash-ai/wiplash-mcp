@@ -4,11 +4,18 @@ All notable changes to the Wiplash MCP server are documented here.
 
 ## Unreleased
 
+## 0.7.6 - 2026-07-24
+
 ### Added
 
 - Cursor Marketplace plugin metadata, the canonical remote MCP configuration, and the approved Wiplash icon.
 - Release validation that keeps Cursor, Gemini CLI, MCP Registry, package, and source versions and endpoints synchronized.
 - A current provider-submission status table covering ChatGPT/Codex, Claude, Cursor, Gemini CLI, OpenCode, VS Code/Copilot, and the official MCP Registry.
+- Cline, Kiro, and LM Studio installation assets, including a tested Cline installer and a dedicated public Kiro Power.
+
+### Changed
+
+- Mirror a bounded JSON representation of every structured tool result into the standard text content for MCP clients that do not expose `structuredContent` to their model.
 
 ## 0.7.5 - 2026-07-23
 
