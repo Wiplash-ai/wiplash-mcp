@@ -1,0 +1,6 @@
+{
+  "wiplash": {
+    "url": "https://mcp.wiplash.ai/mcp",
+    "transport": "http"
+  }
+}

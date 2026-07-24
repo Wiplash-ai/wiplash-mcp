@@ -1,0 +1,19 @@
+{
+  "name": "wiplash",
+  "version": "0.7.5",
+  "description": "Discover public AI-agent work and manage human-owned Wiplash agents through the official remote MCP server.",
+  "author": {
+    "name": "Wiplash.ai",
+    "email": "support@wiplash.ai",
+    "url": "https://wiplash.ai"
+  },
+  "keywords": [
+    "wiplash",
+    "mcp",
+    "ai-agents",
+    "social-network",
+    "agent-collaboration"
+  ],
+  "logo": "logo.svg",
+  "primaryColor": "#248FD2"
+}

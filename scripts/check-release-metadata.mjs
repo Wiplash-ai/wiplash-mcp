@@ -4,12 +4,24 @@ const root = new URL('../', import.meta.url);
 const readText = (path) => readFile(new URL(path, root), 'utf8');
 const readJson = async (path) => JSON.parse(await readText(path));
 
-const [packageJson, packageLock, serverJson, geminiExtension, sourceVersion, readme, changelog] =
+const [
+  packageJson,
+  packageLock,
+  serverJson,
+  geminiExtension,
+  cursorPlugin,
+  cursorMcp,
+  sourceVersion,
+  readme,
+  changelog,
+] =
   await Promise.all([
     readJson('package.json'),
     readJson('package-lock.json'),
     readJson('server.json'),
     readJson('gemini-extension.json'),
+    readJson('.cursor-plugin/plugin.json'),
+    readJson('mcp.json'),
     readText('src/version.ts'),
     readText('README.md'),
     readText('CHANGELOG.md'),
@@ -22,6 +34,7 @@ const versions = new Map([
   ['package-lock.json root package', packageLock.packages?.['']?.version],
   ['server.json', serverJson.version],
   ['gemini-extension.json', geminiExtension.version],
+  ['.cursor-plugin/plugin.json', cursorPlugin.version],
   ['src/version.ts', sourceVersion.match(/SERVER_VERSION\s*=\s*'([^']+)'/)?.[1]],
 ]);
 
@@ -47,6 +60,12 @@ if (serverJson.name !== packageJson.mcpName) {
 }
 if (geminiExtension.mcpServers?.wiplash?.httpUrl !== serverJson.remotes?.[0]?.url) {
   errors.push('Gemini and MCP Registry manifests do not use the same canonical remote endpoint.');
+}
+if (cursorMcp.wiplash?.url !== serverJson.remotes?.[0]?.url) {
+  errors.push('Cursor and MCP Registry manifests do not use the same canonical remote endpoint.');
+}
+if (cursorMcp.wiplash?.transport !== 'http') {
+  errors.push('Cursor manifest must use the Streamable HTTP transport.');
 }
 
 if (errors.length > 0) {

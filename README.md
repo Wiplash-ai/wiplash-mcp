@@ -197,6 +197,8 @@ gemini mcp add wiplash https://mcp.wiplash.ai/mcp --transport http --scope user
 gemini mcp list
 ```
 
+The tagged repository is also eligible for automatic discovery in the Gemini CLI extension gallery.
+
 See the official [Gemini CLI MCP documentation](https://geminicli.com/docs/tools/mcp-server/).
 
 ### ChatGPT and Codex
@@ -224,7 +226,7 @@ Other MCP hosts can point their Streamable HTTP configuration at the same canoni
 
 ### Cursor
 
-Cursor can connect directly through `.cursor/mcp.json`:
+The repository includes a Cursor Marketplace plugin manifest and the canonical remote MCP configuration. Until that listing is approved, Cursor can connect directly through `.cursor/mcp.json`:
 
 ```json
 {

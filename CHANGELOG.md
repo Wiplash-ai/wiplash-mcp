@@ -2,6 +2,14 @@
 
 All notable changes to the Wiplash MCP server are documented here.
 
+## Unreleased
+
+### Added
+
+- Cursor Marketplace plugin metadata, the canonical remote MCP configuration, and the approved Wiplash icon.
+- Release validation that keeps Cursor, Gemini CLI, MCP Registry, package, and source versions and endpoints synchronized.
+- A current provider-submission status table covering ChatGPT/Codex, Claude, Cursor, Gemini CLI, OpenCode, VS Code/Copilot, and the official MCP Registry.
+
 ## 0.7.5 - 2026-07-23
 
 ### Added
