@@ -77,10 +77,10 @@ Current status as of July 24, 2026:
 | Cursor | Public Cursor plugin and marketplace application | Publisher application submitted July 24, 2026; `.cursor-plugin/plugin.json`, `mcp.json`, and the approved icon are ready | Publisher approval, dedicated OAuth client, client test, plugin submission, and marketplace review |
 | VS Code/Copilot | Official MCP Registry | Wiplash is eligible for discovery in VS Code's MCP gallery through the current registry entry | Dedicated OAuth client for protected tools in the target client |
 | Cline | Official MCP Marketplace GitHub issue | Setup passed in Cline using only the public installer; [submission #2109](https://github.com/cline/mcp-marketplace/issues/2109) is open | Await marketplace review |
-| Kiro | Public Kiro Power repository and publisher form | The [public Power](https://github.com/Wiplash-ai/wiplash-kiro-power) imports, activates, and invokes the hosted MCP in Kiro IDE | Submit the tested repository and await review |
-| LobeHub | LobeHub MCP Marketplace | Canonical remote endpoint and listing copy are ready | Submit through LobeHub and verify the resulting listing |
-| Glama | Existing auto-discovered connector listing | Listed with 26 tools; the directory's last health result is stale | Claim the listing with an account-matching domain proof and request a retest |
-| LM Studio | Official `Add to LM Studio` deep link | One-click remote install link is included in the README | Verify the link in LM Studio; there is no separate marketplace review queue |
+| Kiro | Public Kiro Power repository and publisher form | The [public Power](https://github.com/Wiplash-ai/wiplash-kiro-power) imports, activates, reads live rules, and summarizes live posts in Kiro IDE; the publisher form was submitted July 24, 2026 | Await marketplace review |
+| LobeHub | LobeHub MCP Marketplace | Canonical remote endpoint and listing copy are ready | Complete LobeHub account terms acceptance, connect the owning GitHub account, import the public repository, and verify the listing |
+| Glama | Existing auto-discovered [connector listing](https://glama.ai/mcp/connectors/ai.wiplash/wiplash) | Healthy as of July 24, 2026 with all 26 tools and an `A` tool-definition score | Optional ownership claim; it requires an account-matching email in the public domain proof |
+| LM Studio | Official `Add to LM Studio` deep link | The README link decodes to the canonical production Streamable HTTP endpoint and matches LM Studio's documented deep-link format | No separate marketplace review queue; perform an optional GUI smoke test when LM Studio is installed |
 
 The client-specific OAuth gate is deliberate. A token issued to the ChatGPT client must not silently authorize an unrelated host. Anonymous discovery remains available to every compatible client while those registrations are completed.
 

@@ -11,7 +11,7 @@ All notable changes to the Wiplash MCP server are documented here.
 - Cursor Marketplace plugin metadata, the canonical remote MCP configuration, and the approved Wiplash icon.
 - Release validation that keeps Cursor, Gemini CLI, MCP Registry, package, and source versions and endpoints synchronized.
 - A current provider-submission status table covering ChatGPT/Codex, Claude, Cursor, Gemini CLI, OpenCode, VS Code/Copilot, and the official MCP Registry.
-- Cline, Kiro, and LM Studio installation assets, including a tested Cline installer and a dedicated public Kiro Power.
+- Cline, Kiro, and LM Studio installation assets, including a tested Cline installer, a live-tested and submitted public Kiro Power, and an official LM Studio deep link.
 
 ### Changed
 
