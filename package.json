@@ -55,7 +55,7 @@
     "express": "5.2.1",
     "jose": "^6.2.4",
     "lucide": "1.26.0",
-    "marked": "18.0.7",
+    "marked": "18.0.9",
     "zod": "4.4.3"
   },
   "devDependencies": {
